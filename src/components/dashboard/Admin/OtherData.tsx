@@ -13,6 +13,7 @@ interface UserTestData {
     departamento: string;
     universidad: string;
     nombres: string;
+    sexo: string;
     apellidos: string;
     carrera: string;
     ciclo: string;
@@ -130,7 +131,7 @@ export default function OtherData() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="text-white text-xl">Cargando...</div>
+        <div className="text-black text-xl">Cargando...</div>
       </div>
     );
   }
@@ -162,6 +163,7 @@ export default function OtherData() {
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">N°</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Edad</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Sexo</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Región</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Universidad</th>
               {Array.from({ length: 30 }, (_, i) => (
@@ -176,6 +178,7 @@ export default function OtherData() {
               <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
                 <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.edad || 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.sexo || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.departamento || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.universidad || 'N/A'}</td>
                 {Array.from({ length: 30 }, (_, i) => (

@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { correctAnswers } from '@/lib/correctAnswers'
 import { questions } from '@/constants/questions'
 import { getAuth } from 'firebase/auth'
-import { getFirestore, doc, updateDoc } from 'firebase/firestore'
+import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 
 const veracityQuestions = [6, 11, 19, 22, 24, 30]
 
 export const TestForm = () => {
-  const router = useRouter()
+  const router = useRouter() 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<number, boolean>>({})
 
@@ -56,12 +56,13 @@ export const TestForm = () => {
         return
       }
   
-      // Update user document in Firestore
+      // Update user document in Firestore with answers, scores, and lastTestDate
       const userRef = doc(db, 'users', auth.currentUser.uid)
       await updateDoc(userRef, {
         answers: answers,
         veracityScore: veracityScore,
-        testDuration: testDuration // Store duration in seconds
+        testDuration: testDuration, // Store duration in seconds
+        lastTestDate: serverTimestamp() // Add timestamp of when the test was completed
       })
   
       // Clean up start time from localStorage
@@ -153,4 +154,4 @@ export const TestForm = () => {
       </div>
     </div> 
   )
-}
+} 

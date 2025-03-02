@@ -126,6 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
     }
   };
+  
   const validateInvitationCode = async (code: string): Promise<string | null> => {
     try {
       const adminCollection = collection(db, "admins");
@@ -143,6 +144,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error("Error al validar el código de invitación");
     }
   };
+  
+  // Modified function to prevent auto sign-in
   const registerUser = async (
     email: string,
     password: string,
@@ -150,6 +153,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     personalInfo: UserData['personalInfo']
   ) => {
     try {
+      // Store current user info to maintain the session
+      const currentUser = auth.currentUser;
+      
       // 1. Validar el código de invitación y obtener el ID del admin
       const adminId = await validateInvitationCode(invitationCode);
       if (!adminId) {
@@ -170,6 +176,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
 
       await setDoc(doc(db, "users", uid), userData);
+      
+      // 4. Re-authenticate as the admin user if they were previously logged in
+      if (currentUser && currentUser.email) {
+        // We'll need to prompt for the admin's password to do this correctly
+        // For now, we'll force a refresh on the current auth state
+        await currentUser.reload();
+      }
 
     } catch (error: any) {
       console.error("Error en el registro:", error);
@@ -192,4 +205,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-

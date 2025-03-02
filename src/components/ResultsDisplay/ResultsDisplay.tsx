@@ -4,6 +4,7 @@ import { getDetailedRecommendations } from "../../constants/recommendations";
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
+import Test from '@/app/test/page';
 
 interface CategoryScore {
   score: number
@@ -187,16 +188,35 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 </p>
               </div>
               <div className="mt-4">
-                <button
-                  onClick={() => {
+              <button
+                onClick={async () => {
+                  try {
+                    // Limpiar localStorage
                     localStorage.removeItem('testAnswers')
-                    router.push('/')
-                  }}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg 
-                           hover:bg-yellow-700 transition-colors"
-                >
-                  Realizar Test Nuevamente
-                </button>
+                    
+                    // Limpiar los datos del test en Firebase y resetear la fecha
+                    const db = getFirestore()
+                    const userRef = doc(db, 'users', userId)
+                    
+                    await updateDoc(userRef, {
+                      answers: {},
+                      testDuration: 0,
+                      veracityScore: 0,
+                      lastTestDate: null // Importante: eliminar la fecha del último test
+                    })
+                    
+                    // Redireccionar directamente a la página del test
+                    router.push('/dashboard/user')
+                  } catch (error) {
+                    console.error('Error al reiniciar el test:', error)
+                    router.push('/dashboard/user')
+                  }
+                }}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg 
+                        hover:bg-yellow-700 transition-colors"
+              >
+                Realizar Test Nuevamente
+              </button>
               </div>
             </div>
           </div>
@@ -205,7 +225,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     )
   }
   if (!results) {
-    return <div className="text-center text-white">Cargando resultados...sadasd</div>
+    return <div className="text-center text-white">Cargando resultados...</div>
   }
   return (
     <div className="w-full px-4">
@@ -269,19 +289,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             </div>
           );
         })}
-      </div>
-  
-      <div className="mt-8 flex justify-center w-full">
-        <button
-          onClick={() => {
-            localStorage.removeItem('testAnswers');
-            router.push('/');
-          }}
-          className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 
-                   transition-colors font-medium text-lg"
-        >
-          Realizar Test Nuevamente
-        </button>
       </div>
     </div>
   );

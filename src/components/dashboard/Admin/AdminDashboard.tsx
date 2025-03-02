@@ -44,7 +44,8 @@ const AdminDashboard = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 p-10 bg-celeste">{renderContent()}</div>
+      <div className="flex-1 p-10 bg-celeste overflow-y-auto">{renderContent()}</div>
+      
     </div>
   );
 };

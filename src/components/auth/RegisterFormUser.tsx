@@ -8,6 +8,7 @@ interface PersonalInfo {
   nombres: string;
   apellidos: string;
   edad: number;
+  sexo: string;
   universidad: string;
   carrera: string;
   ciclo: string;
@@ -27,11 +28,30 @@ export default function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [invitationCode, setInvitationCode] = useState('');
 
+
+
+  const [isEmailValid, setIsEmailValid] = useState(false);
+
+  const validateEmail = (value: string) => {
+    setEmail(value);
+    
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(value)) {
+      setError('Ingresa un correo válido');
+      setIsEmailValid(false);
+    } else {
+      setError('');
+      setIsEmailValid(true);
+    }
+  };
+
+
   // Paso 2: Información personal
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     nombres: '',
     apellidos: '',
     edad: 0,
+    sexo: '',
     universidad: '',
     carrera: '',
     ciclo: '',
@@ -128,10 +148,12 @@ export default function RegisterForm() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => validateEmail(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
                 />
+
+                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+
               </div>
 
               <div>
@@ -196,19 +218,39 @@ export default function RegisterForm() {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="edad" className="block text-sm font-medium text-gray-700 mb-1">
-                  Edad
-                </label>
-                <input
-                  id="edad"
-                  name="edad"
-                  type="number"
-                  value={personalInfo.edad || ''}
-                  onChange={handlePersonalInfoChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="edad" className="block text-sm font-medium text-gray-700 mb-1">
+                    Edad
+                  </label>
+                  <input
+                    id="edad"
+                    name="edad"
+                    type="number"
+                    value={personalInfo.edad || ''}
+                    onChange={handlePersonalInfoChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="sexo" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sexo
+                  </label>
+                  <select
+                    id="sexo"
+                    name="sexo"
+                    value={personalInfo.sexo}
+                    onChange={handlePersonalInfoChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    required
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="Varón">Varón</option>
+                    <option value="Mujer">Mujer</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -283,30 +325,32 @@ export default function RegisterForm() {
                 Anterior
               </button>
             )}
-{step === 1 ? (
-  <button
-    type="button"
-    onClick={handleNextStep}
-    className="w-full mb-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
-  >
-    Siguiente
-  </button>
-) : (
-  <button
-    type="submit"
-    disabled={loading}
-    className={`bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 ${
-      loading ? 'opacity-50 cursor-not-allowed' : ''
-    }`}
-  >
-    {loading ? 'Registrando...' : 'Registrarse'}
-  </button>
-)}
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!isEmailValid}
+                className={`w-full mb-4 py-2 px-4 rounded-md transition 
+                            ${isEmailValid ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                Siguiente
+              </button>
 
 
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className={`bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {loading ? 'Registrando...' : 'Registrarse'}
+              </button>
+            )}
           </div>
         </form>
-      </div>
+      </div> 
    
   );
 }

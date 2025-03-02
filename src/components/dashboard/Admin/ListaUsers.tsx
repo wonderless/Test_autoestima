@@ -8,6 +8,11 @@ import { useRouter } from 'next/navigation';
 interface UserData {
   email: string;
   invitationCode: string;
+  personalInfo: {
+    nombres: string;
+    apellidos: string;
+    sexo: string;
+  };
   testResults?: {
     personal: { score: number; level: string };
     social: { score: number; level: string };
@@ -22,16 +27,19 @@ export default function ListaUsers() {
   const [adminCode, setAdminCode] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const auth = getAuth();
     const db = getFirestore();
+    let isMounted = true;
 
-    // Escuchar cambios en el estado de autenticación
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const fetchData = async (user: any) => {
       if (!user) {
-        router.push('/login'); // Redirigir al login si no hay usuario
+        if (isMounted) {
+          router.push('/login');
+        }
         return;
       }
 
@@ -45,19 +53,25 @@ export default function ListaUsers() {
         // Get admin's invitation code
         const adminsSnapshot = await getDocs(collection(db, 'admins'));
         let currentAdminCode = '';
-        let isAdmin = false;
+        let adminFound = false;
         
         adminsSnapshot.forEach((doc) => {
           const adminData = doc.data();
           if (adminData.email === currentAdminEmail) {
             currentAdminCode = adminData.invitationCode;
-            isAdmin = true;
-            setAdminCode(currentAdminCode);
+            adminFound = true;
+            if (isMounted) {
+              setAdminCode(currentAdminCode);
+              setIsAdmin(true);
+            }
           }
         });
 
-        if (!isAdmin) {
-          router.push('/'); // Redirigir si no es admin
+        if (!adminFound) {
+          if (isMounted) {
+            setIsAdmin(false);
+            router.push('/');
+          }
           return;
         }
 
@@ -68,24 +82,77 @@ export default function ListaUsers() {
         usersSnapshot.forEach((doc) => {
           const userData = doc.data() as UserData;
           // Solo incluir usuarios con el código de invitación correspondiente y que tengan resultados
-          if (userData.invitationCode === currentAdminCode && userData.testResults) {
+          if (userData.invitationCode === currentAdminCode) {
             usersData.push(userData);
           }
         });
 
-        setUsers(usersData);
-        setError(null);
+        if (isMounted) {
+          setUsers(usersData);
+          setError(null);
+        }
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Error al cargar los datos');
+        if (isMounted) {
+          setError('Error al cargar los datos');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    });
+    };
 
-    // Limpiar el listener cuando el componente se desmonte
-    return () => unsubscribe();
+    // Obtener estado de autenticación inicial
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      fetchData(currentUser);
+    } else {
+      // Escuchar cambios en el estado de autenticación solo si no hay usuario actual
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        fetchData(user);
+      });
+      
+      // Limpiar el listener cuando el componente se desmonte
+      return () => {
+        isMounted = false;
+        unsubscribe();
+      };
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
+
+  // Verificación de persistencia para evitar redirecciones no deseadas
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!isAdmin && !loading) {
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        
+        if (currentUser) {
+          const db = getFirestore();
+          const adminsSnapshot = await getDocs(collection(db, 'admins'));
+          let isCurrentUserAdmin = false;
+          
+          adminsSnapshot.forEach((doc) => {
+            const adminData = doc.data();
+            if (adminData.email === currentUser.email) {
+              isCurrentUserAdmin = true;
+            }
+          });
+          
+          if (!isCurrentUserAdmin) {
+            router.push('/');
+          }
+        }
+      }
+    };
+    
+    checkAdminStatus();
+  }, [isAdmin, loading, router]);
 
   const formatTime = (seconds: number | undefined) => {
     if (!seconds) return 'N/A';
@@ -97,7 +164,7 @@ export default function ListaUsers() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="text-white text-xl">Cargando...</div>
+        <div className="text-black text-xl">Cargando...</div>
       </div>
     );
   }
@@ -121,12 +188,18 @@ export default function ListaUsers() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-gray-50  rounded-lg shadow-md overflow-x-auto">
+      <div className="bg-gray-50 rounded-lg shadow-md overflow-x-auto">
         <table className="w-full table-auto">
           <thead className="bg-mi-color-rgb">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                 Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                Nombre
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                Sexo
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                 Personal
@@ -152,6 +225,12 @@ export default function ListaUsers() {
                   {user.email}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  {user.personalInfo?.nombres && user.personalInfo?.apellidos ? `${user.personalInfo?.nombres} ${user.personalInfo?.apellidos}` : 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {user.personalInfo?.sexo || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col">
                     <span>{user.testResults?.personal.score}/6</span>
                     <span className={`text-sm ${
@@ -159,7 +238,7 @@ export default function ListaUsers() {
                       user.testResults?.personal.level === 'MEDIO' ? 'text-yellow-600' :
                       'text-red-600'
                     }`}>
-                      {user.testResults?.personal.level}
+                      {user.testResults?.personal.level || 'N/A'}
                     </span>
                   </div>
                 </td>
@@ -171,7 +250,7 @@ export default function ListaUsers() {
                       user.testResults?.social.level === 'MEDIO' ? 'text-yellow-600' :
                       'text-red-600'
                     }`}>
-                      {user.testResults?.social.level}
+                      {user.testResults?.social.level || 'N/A'}
                     </span>
                   </div>
                 </td>
@@ -183,7 +262,7 @@ export default function ListaUsers() {
                       user.testResults?.academico.level === 'MEDIO' ? 'text-yellow-600' :
                       'text-red-600'
                     }`}>
-                      {user.testResults?.academico.level}
+                      {user.testResults?.academico.level || 'N/A'}
                     </span>
                   </div>
                 </td>
@@ -195,7 +274,7 @@ export default function ListaUsers() {
                       user.testResults?.fisico.level === 'MEDIO' ? 'text-yellow-600' :
                       'text-red-600'
                     }`}>
-                      {user.testResults?.fisico.level}
+                      {user.testResults?.fisico.level || 'N/A'}
                     </span>
                   </div>
                 </td>

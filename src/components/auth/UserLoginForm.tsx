@@ -15,7 +15,7 @@ export default function UserLoginForm() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+  
     try {
       // 1. Intentar autenticar con Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -24,11 +24,10 @@ export default function UserLoginForm() {
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       
       if (!userDoc.exists()) {
-        // Si no existe en la colección 'users', cerrar sesión y mostrar error
         await auth.signOut();
         throw new Error('No tienes permiso para acceder como usuario');
       }
-
+  
       const userData = userDoc.data();
       
       // 3. Verificar que el rol sea 'user'
@@ -36,36 +35,30 @@ export default function UserLoginForm() {
         await auth.signOut();
         throw new Error('No tienes permiso para acceder como usuario');
       }
-
+  
       // 4. Si todo está bien, redirigir al dashboard de usuario
       router.push('/dashboard/user');
-
+  
     } catch (err: any) {
-      let errorMessage = 'Error al iniciar sesión';
-      
+      console.error('Error durante el login:', err);
+  
+      let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
+  
       // Manejar errores específicos de Firebase Auth
-      switch (err.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'Usuario no encontrado';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Contraseña incorrecta';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Correo electrónico inválido';
-          break;
-        case 'auth/too-many-requests':
-          errorMessage = 'Demasiados intentos fallidos. Intenta más tarde';
-          break;
-        default:
-          errorMessage = err.message || errorMessage;
+      if (err.code === 'auth/user-not-found') {
+        errorMessage = 'El usuario no existe. Verifica el correo ingresado.';
+      }else if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Ya existe una cuenta con este correo electrónico.';
+      } else {
+        errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
       }
-      
+  
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
