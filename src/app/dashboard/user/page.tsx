@@ -1,10 +1,14 @@
-import UserDashboard from "../../../components/dashboard/User/UserDashboard";
+"use client";
+import UserDashboard from "@/components/dashboard/User/UserDashboard";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const Page = () => {
   return (
-    <div>
-      <UserDashboard />
-    </div>
+    <ProtectedRoute allowedRoles="user">
+      <div>
+        <UserDashboard />
+      </div>
+    </ProtectedRoute>
   );
 };
 

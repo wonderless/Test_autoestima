@@ -98,25 +98,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       
-      // Verificar en cada colección
+      // Obtener el token
+      const token = await result.user.getIdToken();
+      
+      // Llamar a la API para establecer la cookie
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al establecer la sesión');
+      }
+      
+      // Verificar roles igual que antes...
       const superadminDoc = await getDoc(doc(db, 'superadmins', result.user.uid));
       const adminDoc = await getDoc(doc(db, 'admins', result.user.uid));
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
       let userData: UserData | null = null;
-
+      
       if (superadminDoc.exists()) {
         userData = { ...superadminDoc.data() as UserData, uid: result.user.uid, role: 'superadmin' };
       } else if (adminDoc.exists()) {
         userData = { ...adminDoc.data() as UserData, uid: result.user.uid, role: 'admin' };
+      } else if (userDoc.exists()) {
+        userData = { ...userDoc.data() as UserData, uid: result.user.uid, role: 'user' };
       }
-
+      
       if (!userData) {
-        throw new Error("Acceso no autorizado: usuario no es admin ni superadmin");
+        // Cerrar sesión
+        await firebaseSignOut(auth);
+        await fetch('/api/auth/session', { method: 'DELETE' });
+        throw new Error("Usuario no encontrado en ninguna colección");
       }
-
+      
       setUser(userData);
       return userData;
-
     } catch (error: any) {
       console.error("Error en el inicio de sesión:", error);
       throw new Error(
@@ -126,7 +147,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       );
     }
   };
-  
   const validateInvitationCode = async (code: string): Promise<string | null> => {
     try {
       const adminCollection = collection(db, "admins");

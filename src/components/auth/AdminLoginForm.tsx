@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function LoginForm() {
+export default function AdminLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,27 +19,21 @@ export default function LoginForm() {
     try {
       const userData = await auth.signIn(email, password);
       
-      switch (userData.role) {
-        case 'superadmin':
-          router.push('/dashboard/superadmin');
-          break;
-        case 'admin':
-          router.push('/dashboard/admin');
-          break;
-        case 'user':
-          router.push('/dashboard/user');
-          break;
-        default:
-          setError('Rol de usuario no válido');
+      // Solo permitir superadmin o admin
+      if (userData.role === 'superadmin') {
+        router.push('/dashboard/superadmin');
+      } else if (userData.role === 'admin') {
+        router.push('/dashboard/admin');
+      } else {
+        // Si es un usuario estudiante, mostrar error
+        await auth.signOut();
+        setError('Acceso no autorizado. Por favor utilice el formulario de estudiantes.');
       }
     } catch (err: any) {
       console.error('Error durante el login:', err);
       
-      // Manejamos los errores de Firebase
       if (err.code === 'auth/invalid-credential') {
         setError('Correo o contraseña incorrectos.');
-      } else if (err.message === "Acceso no autorizado: usuario no es admin ni superadmin") {
-        setError('Acceso no autorizado. Usa el login de estudiantes.');
       } else {
         setError('Error al iniciar sesión. Verifica tus credenciales.');
       }

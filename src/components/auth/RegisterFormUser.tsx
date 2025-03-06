@@ -334,8 +334,8 @@ export default function RegisterForm() {
                             ${isEmailValid ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 cursor-not-allowed'}`}
               >
                 Siguiente
-              </button>
-
+              </button> 
+  
 
             ) : (
               <button

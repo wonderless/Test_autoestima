@@ -168,6 +168,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   if (!isVeracityValid) {
     return (
       <div className="max-w-2xl mx-auto p-6">
+                    <h1 className="text-3xl font-bold text-center mb-8 text-white">
+        Resultados del Test
+      </h1>
         <div className="bg-celeste border-l-4 p-8 rounded-lg">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -229,12 +232,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }
   return (
     <div className="w-full px-4">
+            <h1 className="text-3xl font-bold text-center mb-8 text-white">
+        Resultados del Test
+      </h1>
       <div className="text-center text-lg font-bold mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
         <span className={generalLevel === 'ALTO' ? 'text-green-500' : generalLevel === 'MEDIO' ? 'text-yellow-500' : 'text-red-500'}>
           {generalLevel}
         </span>
       </div>
+      
   
       <div className="grid grid-cols-1 gap-6 w-full">
         {Object.entries(results).map(([category, data], index) => {
@@ -278,7 +285,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
                       <div className="mt-2 p-2 bg-celeste rounded">
                         <p className="text-blue-700">
-                          <span className="font-medium">Actividad: </span>
+                          <span className="font-medium"  style={{ whiteSpace: "pre-line" }} >Actividad: </span>
                           {rec.activity}
                         </p>
                       </div>

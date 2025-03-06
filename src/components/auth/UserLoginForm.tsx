@@ -35,8 +35,28 @@ export default function UserLoginForm() {
         await auth.signOut();
         throw new Error('No tienes permiso para acceder como usuario');
       }
+      
+      // 4. Establecer la sesión mediante la API
+      const token = await userCredential.user.getIdToken();
+      // Incluir el rol en el token para que el middleware pueda verificarlo
+      const sessionData = {
+        token,
+        role: 'user'
+      };  
+      
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(sessionData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al establecer la sesión');
+      }
   
-      // 4. Si todo está bien, redirigir al dashboard de usuario
+      // 5. Si todo está bien, redirigir al dashboard de usuario
       router.push('/dashboard/user');
   
     } catch (err: any) {
@@ -47,10 +67,12 @@ export default function UserLoginForm() {
       // Manejar errores específicos de Firebase Auth
       if (err.code === 'auth/user-not-found') {
         errorMessage = 'El usuario no existe. Verifica el correo ingresado.';
-      }else if (err.code === 'auth/email-already-in-use') {
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Contraseña incorrecta. Inténtalo de nuevo.';
+      } else if (err.code === 'auth/email-already-in-use') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico.';
-      } else {
-        errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
+      } else if (err.message) {
+        errorMessage = err.message;
       }
   
       setError(errorMessage);
@@ -58,11 +80,10 @@ export default function UserLoginForm() {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
-      <h2 className="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+      <h2 className="text-2xl font-bold text-center mb-6">Iniciar Sesión como Estudiante</h2>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

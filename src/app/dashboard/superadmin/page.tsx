@@ -1,11 +1,14 @@
-import SuperAdminDashboard from "../../../components/dashboard/SuperAdmin/SuperAdminDashboard";
-
+"use client";
+import SuperAdminDashboard from "@/components/dashboard/SuperAdmin/SuperAdminDashboard";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const Page = () => {
   return (
-    <div>
-      <SuperAdminDashboard />
-    </div>
+    <ProtectedRoute allowedRoles="superadmin">
+      <div>
+        <SuperAdminDashboard />
+      </div>
+    </ProtectedRoute>
   );
 };
 

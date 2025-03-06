@@ -11,7 +11,7 @@ const UserDashboard = () => {
   const [nextAvailableDate, setNextAvailableDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useEffect(() => { 
     const checkTestAvailability = async () => {
       try {
         const auth = getAuth(); 
@@ -78,7 +78,7 @@ const UserDashboard = () => {
   if (loading) {
     return (
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-6 max-w-lg bg-celeste rounded-xl shadow-md flex flex-col items-center">
-        <p className=" text-black">Cargando...</p>
+        <p className=" text-black">Cargando...</p> 
       </div>
     );
   }

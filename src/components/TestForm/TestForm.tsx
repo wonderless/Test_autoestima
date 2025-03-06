@@ -2,12 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { correctAnswers } from '@/lib/correctAnswers'
-import { questions } from '@/constants/questions'
+import { correctAnswers,answersveracityQuestions } from '@/lib/correctAnswers'
+import { questions ,veracityQuestions} from '@/constants/questions'
 import { getAuth } from 'firebase/auth'
 import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
-
-const veracityQuestions = [6, 11, 19, 22, 24, 30]
 
 export const TestForm = () => {
   const router = useRouter() 
@@ -36,9 +34,9 @@ export const TestForm = () => {
 
   const handleSubmit = async () => {
     try {
-      // Calculate veracity score
-      const veracityScore = veracityQuestions.reduce((score, questionNum) => {
-        return score + (answers[questionNum] === correctAnswers[questionNum] ? 1 : 0)
+      // Calculate veracity score - modificado para usar answersveracityQuestions
+      const veracityScore = veracityQuestions.reduce((score, questionNum, index) => {
+        return score + (answers[questionNum] === answersveracityQuestions[index] ? 1 : 0)
       }, 0)
   
       // Calculate test duration
@@ -154,4 +152,4 @@ export const TestForm = () => {
       </div>
     </div> 
   )
-} 
+}
