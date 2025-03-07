@@ -4,13 +4,14 @@ import { ResultsDisplay } from '../../components/ResultsDisplay/ResultsDisplay'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getFirestore, doc, getDoc } from 'firebase/firestore'
+import { getFirestore, doc, getDoc } from 'firebase/firestore'  
+import { UserInfo } from '@/types/userInfo'
 
 export default function Results() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [userInfo, setUserInfo] = useState<any>(null)
+  const [userInfo, setUserInfo] = useState<UserInfo | null >(null)
 
   useEffect(() => {
     const auth = getAuth()
@@ -27,7 +28,7 @@ export default function Results() {
         
         if (userDoc.exists()) {
           const userData = userDoc.data()
-          setUserInfo(userData)
+          setUserInfo({...userData,lastTestDate:userData.lastTestDate.toDate()}as UserInfo)
           setUserId(user.uid)
         } else {
           // Silenciosamente redirigir al inicio sin mostrar error
@@ -35,6 +36,7 @@ export default function Results() {
           router.push('/')
         }
       } catch (error) {
+        console.error("Error retrieving user document:", error);
         // Silenciosamente manejar cualquier error redirigiendo
         router.push('/')
       } finally {
