@@ -74,8 +74,8 @@ export default function UserLoginForm() {
       }else if(err.code === 'auth/invalid-credential') {
         errorMessage = 'Credenciales inválidas. Inténtalo de nuevo';
       } 
-      else if (err.message) {
-        errorMessage = err.message; 
+      else  {
+        errorMessage = 'Credenciales inválidas. Inténtalo de nuevo';
       }
       //Sss
       setError(errorMessage);
