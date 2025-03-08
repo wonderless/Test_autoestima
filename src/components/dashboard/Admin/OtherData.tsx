@@ -93,6 +93,7 @@ export default function OtherData() {
         return {
           'N°': index + 1,
           'Edad': user.personalInfo?.edad || 'N/A',
+          'Sexo': user.personalInfo?.sexo || 'N/A',
           'Región': user.personalInfo?.departamento || 'N/A',
           'Universidad': user.personalInfo?.universidad || 'N/A',
           ...answersArray.reduce((acc, curr, i) => ({
@@ -109,6 +110,7 @@ export default function OtherData() {
       const colWidths = {
         'N°': 5,
         'Edad': 8,
+        'Sexo': 15,
         'Región': 15,
         'Universidad': 30,
         ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1}`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {})

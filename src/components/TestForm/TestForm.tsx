@@ -78,20 +78,20 @@ export const TestForm = () => {
   const isLastQuestion = currentQuestion === questions.length - 1
 
   return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] p-6">
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl p-4 md:p-6">
       {isFirstQuestion && (
-        <h1 className="text-3xl font-bold text-center mb-8 text-white">
+        <h1 className="text-xl md:text-3xl font-bold text-center mb-4 md:mb-8 text-white">
           Test de Autoestima General (TAG)
         </h1>
       )}
-
-      <div className="bg-celeste p-8 rounded-lg shadow-lg mb-6">
-        <h2 className="text-xl font-medium mb-6 min-h-[80px] flex items-center">
+      
+      <div className="bg-celeste p-4 md:p-8 rounded-lg shadow-lg mb-4 md:mb-6">
+        <h2 className="text-lg md:text-xl font-medium mb-4 md:mb-6 min-h-0 md:min-h-[80px] flex items-center">
           {currentQuestion + 1}. {currentQuestionData.text}
         </h2>
-
-        <div className="flex">
-          <label className="flex-1 flex items-center justify-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
+        
+        <div className="flex flex-row">
+          <label className="flex-1 flex items-center justify-center p-2 md:p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
               type="radio"
               name={`question-${currentQuestionData.id}`}
@@ -101,8 +101,8 @@ export const TestForm = () => {
             />
             <span className="ml-3">Sí</span>
           </label>
-
-          <label className="flex-1 flex items-center justify-center p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
+          
+          <label className="flex-1 flex items-center justify-center p-2 md:p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
               type="radio"
               name={`question-${currentQuestionData.id}`}
@@ -114,27 +114,27 @@ export const TestForm = () => {
           </label>
         </div>
       </div>
-
+      
       <div className="flex justify-between">
         {!isFirstQuestion && (
           <button
             onClick={goToPreviousQuestion}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 
-                     transition-colors font-medium"
+            className="px-4 md:px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300
+                      transition-colors font-medium text-sm md:text-base"
           >
             Atrás
           </button>
         )}
         
         <div className="flex-1" />
-
+        
         {!isLastQuestion ? (
           <button
             onClick={goToNextQuestion}
             disabled={!answers.hasOwnProperty(currentQuestionData.id)}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 
-                     transition-colors font-medium disabled:opacity-50 
-                     disabled:cursor-not-allowed"
+            className="px-4 md:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700
+                      transition-colors font-medium disabled:opacity-50
+                      disabled:cursor-not-allowed text-sm md:text-base"
           >
             Siguiente
           </button>
@@ -142,14 +142,14 @@ export const TestForm = () => {
           <button
             onClick={handleSubmit}
             disabled={!answers.hasOwnProperty(currentQuestionData.id)}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 
-                     transition-colors font-medium disabled:opacity-50 
-                     disabled:cursor-not-allowed"
+            className="px-4 md:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700
+                      transition-colors font-medium disabled:opacity-50
+                      disabled:cursor-not-allowed text-sm md:text-base"
           >
             Finalizar Test
           </button>
         )}
       </div>
-    </div> 
+    </div>
   )
 }

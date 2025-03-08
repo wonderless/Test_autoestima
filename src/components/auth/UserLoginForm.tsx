@@ -71,10 +71,13 @@ export default function UserLoginForm() {
         errorMessage = 'Contraseña incorrecta. Inténtalo de nuevo.';
       } else if (err.code === 'auth/email-already-in-use') {
         errorMessage = 'Ya existe una cuenta con este correo electrónico.';
-      } else if (err.message) {
+      }else if(err.code === 'auth/invalid-credential') {
+        errorMessage = 'Credenciales inválidas. Inténtalo de nuevo';
+      } 
+      else if (err.message) {
         errorMessage = err.message;
       }
-  
+
       setError(errorMessage);
     } finally {
       setLoading(false);

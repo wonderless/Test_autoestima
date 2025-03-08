@@ -54,7 +54,33 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const getUserRole = async (uid: string) => {
+    try {
+      // Primero intentamos obtener el rol de la colección superadmins
+      const superadminDoc = await getDoc(doc(db, 'superadmins', uid));
+      if (superadminDoc.exists()) {
+        return 'superadmin';
+      }
 
+      // Luego intentamos obtener el rol de la colección admins
+      const adminDoc = await getDoc(doc(db, 'admins', uid));
+      if (adminDoc.exists()) {
+        return 'admin';
+      }
+
+      // Finalmente intentamos obtener el rol de la colección users
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists() && userDoc.data().role) {
+        return userDoc.data().role;
+      }
+
+      // Si no encontramos un rol, asumimos 'user'
+      return 'user';
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return 'user'; // Valor predeterminado
+    }
+  };
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {

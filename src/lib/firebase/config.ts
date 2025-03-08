@@ -4,14 +4,15 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyA4gN9junNHD5fu5K6oElpsetCxpVj5_SY",
-    authDomain: "psicologia-92b81.firebaseapp.com",
-    projectId: "psicologia-92b81",
-    storageBucket: "psicologia-92b81.firebasestorage.app",
-    messagingSenderId: "114180714198",
-    appId: "1:114180714198:web:28ebaf1e62a86d2145a377",
-    measurementId: "G-ZM7YW7XH4D"
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
   };
+
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
