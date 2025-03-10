@@ -4,7 +4,6 @@ import { getDetailedRecommendations } from "../../constants/recommendations";
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
-import Test from '@/app/test/page';
 
 interface CategoryScore {
   score: number
@@ -230,11 +229,266 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   if (!results) {
     return <div className="text-center text-white">Cargando resultados...</div>
   }
+
+
+//hola
+  // Coordenadas para el dispersigrama (calculadas en base a los puntajes)
+  const calculatePointCoordinate = (score: number, baseCoord: number, direction: 1 | -1): number => {
+    // Ajustamos las coordenadas según el puntaje (0-6)
+    // Una puntuación de 6 estará más cerca del centro, una de 0 más lejos
+    const distance = 25 * (6 - score); // 25px por cada punto de distancia
+    return baseCoord + (direction * distance);
+  };
+
+  // Base center point
+  const centerX = 300;
+  const centerY = 250;
+
+  // Cálculo de coordenadas para cada aspecto
+  const personalY = calculatePointCoordinate(results.personal.score, centerY, -1); // Hacia arriba
+  const fisicoY = calculatePointCoordinate(results.fisico.score, centerY, 1); // Hacia abajo
+  const socialX = calculatePointCoordinate(results.social.score, centerX, -1); // Hacia la izquierda
+  const academicoX = calculatePointCoordinate(results.academico.score, centerX, 1); // Hacia la derecha
+
+  // Nivel para cada categoría
+  const getLevelClass = (level: string): string => {
+    if (level === 'ALTO') return 'bg-green-100 text-green-800';
+    if (level === 'MEDIO') return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+  const getLevelColor = (level: 'ALTO' | 'MEDIO' | 'BAJO'): string => {
+    switch (level) {
+      case 'ALTO': return 'text-green-500';
+      case 'MEDIO': return 'text-yellow-500';
+      case 'BAJO': return 'text-red-500';
+      default: return '';
+    }
+  };
   return (
+
+ 
     <div className="w-full px-4">
-            <h1 className="text-3xl font-bold text-center mb-8 text-white">
-        Resultados del Test
+      <h1 className="text-3xl font-bold text-center mb-8 text-white">
+        Resultados del Test de Autoestima
       </h1>
+      
+      {/* Nivel general */}
+      <div className="text-center text-lg font-bold mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm w-full">
+        Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
+        <span className={getLevelColor(generalLevel || 'MEDIO')}>
+          {generalLevel}
+        </span>
+      </div>
+      
+      {/* Tabla de resultados */}
+      <div className="mb-8 bg-celeste p-6 rounded-lg shadow-lg w-full">
+        <h2 className="text-xl font-semibold mb-4">Perfil Psicológico</h2>
+        
+        <div className="overflow-x-auto">
+        <table className="w-full border-collapse border-2 border-black">
+  <thead>
+    <tr className="bg-mi-color-rgb text-white">
+      <th className="py-3 px-4 text-left border-2 border-black">Aspecto</th>
+      <th className="py-3 px-4 text-center border-2 border-black">Puntuación</th>
+      <th className="py-3 px-4 text-center border-2 border-black">Nivel</th>
+      <th className="py-3 px-4 text-left border-2 border-black">Interpretación</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td className="py-3 px-4 border-2 border-black font-medium">Personal</td>
+      <td className="py-3 px-4 border-2 border-black text-center font-bold">{results.personal.score}/6</td>
+      <td className="py-3 px-4 border-2 border-black text-center">
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(results.personal.level)}`}>
+          {results.personal.level}
+        </span>
+      </td>
+      <td className="py-3 px-4 border-2 border-black">
+        {results.personal.level === 'ALTO' && 'Buena percepción de sí mismo y confianza en sus capacidades personales.'}
+        {results.personal.level === 'MEDIO' && 'Percepción adecuada de sí mismo con áreas por reforzar.'}
+        {results.personal.level === 'BAJO' && 'Puede mejorar en la confianza y valoración de sí mismo.'}
+      </td>
+    </tr>
+    <tr>
+      <td className="py-3 px-4 border-2 border-black font-medium">Social</td>
+      <td className="py-3 px-4 border-2 border-black text-center font-bold">{results.social.score}/6</td>
+      <td className="py-3 px-4 border-2 border-black text-center">
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(results.social.level)}`}>
+          {results.social.level}
+        </span>
+      </td>
+      <td className="py-3 px-4 border-2 border-black">
+        {results.social.level === 'ALTO' && 'Facilidad para interactuar socialmente y establecer relaciones saludables.'}
+        {results.social.level === 'MEDIO' && 'Relativa facilidad para interactuar socialmente, con aspectos por mejorar.'}
+        {results.social.level === 'BAJO' && 'Puede fortalecer sus habilidades de interacción social.'}
+      </td>
+    </tr>
+    <tr>
+      <td className="py-3 px-4 border-2 border-black font-medium">Académico</td>
+      <td className="py-3 px-4 border-2 border-black text-center font-bold">{results.academico.score}/6</td>
+      <td className="py-3 px-4 border-2 border-black text-center">
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(results.academico.level)}`}>
+          {results.academico.level}
+        </span>
+      </td>
+      <td className="py-3 px-4 border-2 border-black">
+        {results.academico.level === 'ALTO' && 'Confianza elevada en sus capacidades de aprendizaje y desempeño académico.'}
+        {results.academico.level === 'MEDIO' && 'Adecuada valoración de sus capacidades académicas.'}
+        {results.academico.level === 'BAJO' && 'Puede aumentar la confianza en sus habilidades académicas.'}
+      </td>
+    </tr>
+    <tr>
+      <td className="py-3 px-4 border-2 border-black font-medium">Físico</td>
+      <td className="py-3 px-4 border-2 border-black text-center font-bold">{results.fisico.score}/6</td>
+      <td className="py-3 px-4 border-2 border-black text-center">
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(results.fisico.level)}`}>
+          {results.fisico.level}
+        </span>
+      </td>
+      <td className="py-3 px-4 border-2 border-black">
+        {results.fisico.level === 'ALTO' && 'Buena aceptación y valoración de su imagen corporal y capacidades físicas.'}
+        {results.fisico.level === 'MEDIO' && 'Aceptación moderada de su imagen y capacidades físicas.'}
+        {results.fisico.level === 'BAJO' && 'Puede mejorar la aceptación de su imagen corporal.'}
+      </td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        
+        <div className="mt-4 p-4">
+          <p className="font-medium text-blue-800">Interpretación de niveles:</p>
+          <ul className="mt-2 space-y-1">
+            <li>
+              <span className="text-red-500 font-medium">Bajo (0-2 puntos): </span>
+              Indica áreas que requieren atención y desarrollo.
+            </li>
+            <li>
+              <span className="text-yellow-500 font-medium">Medio (3 puntos): </span>
+              Refleja un desarrollo adecuado con oportunidades de mejora.
+            </li>
+            <li>
+              <span className="text-green-500 font-medium">Alto (4-6 puntos): </span>
+              Muestra fortalezas y un buen desarrollo en el aspecto evaluado.
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      {/* Dispersigrama */}
+      <div className="bg-celeste p-6 rounded-lg shadow-lg w-full">
+        <h2 className="text-xl font-semibold mb-4">Dispersigrama de Resultados</h2>
+        
+        <div className="w-full flex justify-center">
+          <div className="w-full max-w-xl">
+            <svg 
+              viewBox="0 0 600 500" 
+              className="w-full h-auto border rounded-lg bg-white p-4"
+            >
+              {/* Ejes y líneas de referencia */}
+              <line x1="300" y1="50" x2="300" y2="450" stroke="#ccc" strokeWidth="1"/>
+              <line x1="100" y1="250" x2="500" y2="250" stroke="#ccc" strokeWidth="1"/>
+              
+              {/* Círculos de referencia (niveles) */}
+
+              
+              {/* Etiquetas de los ejes */}
+              <text x="300" y="40" textAnchor="middle" fontWeight="bold">PERSONAL</text>
+              <text x="300" y="470" textAnchor="middle" fontWeight="bold">FÍSICO</text>
+              <text x="80" y="250" textAnchor="middle" fontWeight="bold">SOCIAL</text>
+              <text x="520" y="250" textAnchor="middle" fontWeight="bold">ACADÉMICO</text>
+              
+              {/* Puntos de datos */}
+              <circle cx="300" cy={personalY} r="8" fill={results.personal.level === 'ALTO' ? '#28a745' : results.personal.level === 'MEDIO' ? '#ffc107' : '#dc3545'}/>
+              <circle cx={academicoX} cy="250" r="8" fill={results.academico.level === 'ALTO' ? '#28a745' : results.academico.level === 'MEDIO' ? '#ffc107' : '#dc3545'}/>
+              <circle cx={socialX} cy="250" r="8" fill={results.social.level === 'ALTO' ? '#28a745' : results.social.level === 'MEDIO' ? '#ffc107' : '#dc3545'}/>
+              <circle cx="300" cy={fisicoY} r="8" fill={results.fisico.level === 'ALTO' ? '#28a745' : results.fisico.level === 'MEDIO' ? '#ffc107' : '#dc3545'}/>
+              
+              {/* Polígono que conecta los puntos */}
+              <polygon 
+                points={`300,${personalY} ${academicoX},250 300,${fisicoY} ${socialX},250`} 
+                fill="rgba(74, 111, 165, 0.2)" 
+                stroke="#4a6fa5" 
+                strokeWidth="2"
+              />
+              
+              {/* Puntuaciones en los puntos */}
+              <text x="300" y={personalY - 15} textAnchor="middle" fontSize="12">{results.personal.score}</text>
+              <text x={academicoX + 15} y="250" textAnchor="middle" fontSize="12">{results.academico.score}</text>
+              <text x={socialX - 15} y="250" textAnchor="middle" fontSize="12">{results.social.score}</text>
+              <text x="300" y={fisicoY + 15} textAnchor="middle" fontSize="12">{results.fisico.score}</text>
+            </svg>
+          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-center space-x-6">
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
+            <span>Alto (4-6)</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-yellow-500 mr-2"></div>
+            <span>Medio (3)</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 rounded-full bg-red-500 mr-2"></div>
+            <span>Bajo (0-2)</span>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+          <p className="font-medium text-blue-800">Interpretación del Dispersigrama:</p>
+          <p className="mt-2">
+            El gráfico muestra los niveles de autoestima en los cuatro aspectos evaluados. 
+            Cuanto más cerca está el punto del centro, mayor es la puntuación obtenida. 
+            {results.personal.level === 'ALTO' && results.academico.level === 'ALTO' && 
+              ' Las fortalezas se observan principalmente en los aspectos personal y académico.'}
+            {results.social.level === 'ALTO' && results.fisico.level === 'ALTO' && 
+              ' Las fortalezas se observan principalmente en los aspectos social y físico.'}
+            {results.personal.level === 'BAJO' && ' El aspecto personal muestra oportunidades de mejora.'}
+            {results.social.level === 'BAJO' && ' El aspecto social muestra oportunidades de mejora.'}
+            {results.academico.level === 'BAJO' && ' El aspecto académico muestra oportunidades de mejora.'}
+            {results.fisico.level === 'BAJO' && ' El aspecto físico muestra oportunidades de mejora.'}
+          </p>
+          <p className="mt-2">
+            La forma del polígono resultante indica un perfil de autoestima 
+            {Math.max(
+              results.personal.score, 
+              results.social.score, 
+              results.academico.score, 
+              results.fisico.score
+            ) - 
+            Math.min(
+              results.personal.score, 
+              results.social.score, 
+              results.academico.score, 
+              results.fisico.score
+            ) > 2 
+              ? ' con desarrollo desigual' 
+              : ' con desarrollo equilibrado'}.
+          </p>
+        </div>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+      <h1 className="text-3xl font-bold text-center mt-6 mb-6 text-white">
+  Recomendaciones del Test
+</h1>
+
       <div className="text-center text-lg font-bold mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
         <span className={generalLevel === 'ALTO' ? 'text-green-500' : generalLevel === 'MEDIO' ? 'text-yellow-500' : 'text-red-500'}>

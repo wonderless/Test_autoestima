@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { 
   collection, 
-  addDoc, 
-  updateDoc, 
   deleteDoc, 
   doc, 
   getDocs,
   query,
   where,
-  Timestamp,
-  setDoc 
+  setDoc, 
+  getDoc
 } from "firebase/firestore";
-import { 
-  createUserWithEmailAndPassword,
-  deleteUser,
-  signInWithEmailAndPassword,
-  signOut,
-  getAuth
-} from "firebase/auth";
-import { db, auth } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/config';
 
 interface Admin {
   id: string;
@@ -131,18 +122,12 @@ const ListaAdmin: React.FC = () => {
         email: newAdmin.email,
         invitationCode: invitationCode,
         role: 'admin',
-        uid: uid
+        uid: uid,
+        password: newAdmin.password,
       };
       
       // No almacenamos la contraseña en Firestore por seguridad
       await setDoc(doc(db, "admins", uid), adminData);
-      
-      // También actualiza el documento del usuario en la colección 'users' si la usas
-      await setDoc(doc(db, "users", uid), {
-        email: newAdmin.email,
-        role: 'admin',
-        createdAt: new Date()
-      });
       
       // 4. Actualizar el estado local
       setAdmins([...admins, { ...adminData, id: uid, password: newAdmin.password }]);
@@ -162,53 +147,57 @@ const ListaAdmin: React.FC = () => {
   const togglePasswordVisibility = (id: string) => {
     setShowPassword(prev => ({ ...prev, [id]: !prev[id] }));
   };
-  
-  const handleEditAdmin = async (id: string, field: keyof Admin, value: string) => {
-    const adminIndex = admins.findIndex(admin => admin.id === id);
-    if (adminIndex === -1) return;
-  
-    try {
-      if (field === "password") {
-        const admin = admins[adminIndex];
-        await signInWithEmailAndPassword(auth, admin.email, admin.password);
-      }
-  
-      if (field === "invitationCode") {
-        setError("No se puede modificar el código de invitación");
-        return;
-      }
-  
-      const updatedAdmins = [...admins];
-      updatedAdmins[adminIndex] = {
-        ...updatedAdmins[adminIndex],
-        [field]: value,
-      };
-      setAdmins(updatedAdmins);
-    } catch (err) {
-      setError("Error al actualizar el administrador");
-      console.error(err);
-    }
-  };
 
   const handleDeleteAdmin = async (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar este administrador?")) return;
-
+    if (!window.confirm("¿Está seguro de eliminar este administrador? Esta acción también eliminará a todos los estudiantes asociados a este administrador.")) return;
+    
     try {
       setLoading(true);
-
-      // Eliminar de Authentication
-      // const adminAuth = auth.currentUser;
-     //  if (adminAuth) {
-     //  //   await deleteUser(adminAuth);
-    //   }
-
-      // Eliminar de la colección admins
+      
+      // 1. Primero obtenemos el authUID desde el documento del admin
+      const adminDoc = await getDoc(doc(db, "admins", id));
+      const authUID = adminDoc.data()?.uid;
+      
+      if (!authUID) {
+        setError("No se encontró el UID de autenticación para este administrador");
+        return;
+      }
+      
+      // 2. Eliminar a todos los usuarios asociados a este administrador
+      const deleteUsersResponse = await fetch(`/api/admin/delete-users-by-admin?adminId=${authUID}`, {
+        method: 'DELETE',
+      });
+      
+      let usersDeletedCount = 0;
+      if (deleteUsersResponse.ok) {
+        const usersDeletedResult = await deleteUsersResponse.json();
+        usersDeletedCount = usersDeletedResult.usersDeleted || 0;
+      } else {
+        console.error("Error al eliminar usuarios asociados:", await deleteUsersResponse.json());
+      }
+      
+      // 3. Llamar al API route de Next.js para eliminar el administrador de Authentication
+      const authResponse = await fetch(`/api/admin/delete-admin?uid=${authUID}`, {
+        method: 'DELETE',
+      });
+      
+      if (!authResponse.ok) {
+        const errorData = await authResponse.json();
+        throw new Error(errorData.error || "Error al eliminar de Authentication");
+      }
+      
+      // 4. Si la eliminación de Authentication fue exitosa, eliminar de Firestore
       await deleteDoc(doc(db, "admins", id));
-
+      
+      // 5. Actualizar el estado
       setAdmins(admins.filter(admin => admin.id !== id));
       setError(null);
+      
+      // 6. Mostrar mensaje de éxito
+      alert(`Administrador eliminado exitosamente. También se eliminaron ${usersDeletedCount} estudiantes asociados.`);
+      
     } catch (err) {
-      setError("Error al eliminar administrador");
+      setError(err instanceof Error ? err.message : "Error al eliminar administrador");
       console.error(err);
     } finally {
       setLoading(false);

@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 
 interface UserTestData {
   email: string;
+  testDuration?: number;
   personalInfo: {
     edad: number;
     departamento: string;
@@ -27,6 +28,12 @@ export default function OtherData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const formatTime = (seconds: number | undefined) => {
+    if (!seconds) return 'N/A';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
 
   useEffect(() => {
     const auth = getAuth();
@@ -96,6 +103,9 @@ export default function OtherData() {
           'Sexo': user.personalInfo?.sexo || 'N/A',
           'Región': user.personalInfo?.departamento || 'N/A',
           'Universidad': user.personalInfo?.universidad || 'N/A',
+          'Carrera': user.personalInfo?.carrera || 'N/A',
+          'Ciclo': user.personalInfo?.ciclo || 'N/A',
+          'Tiempo': formatTime(user.testDuration)|| 'N/A',
           ...answersArray.reduce((acc, curr, i) => ({
             ...acc,
             [`P${i + 1}`]: curr
@@ -112,7 +122,10 @@ export default function OtherData() {
         'Edad': 8,
         'Sexo': 15,
         'Región': 15,
-        'Universidad': 30,
+        'Universidad': 25,
+        'Carrera': 25,
+        'Ciclo': 10,
+        'Tiempo': 15,
         ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1}`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {})
       };
 
@@ -168,6 +181,9 @@ export default function OtherData() {
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Sexo</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Región</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Universidad</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Carrera</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Ciclo</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Tiempo</th>
               {Array.from({ length: 30 }, (_, i) => (
                 <th key={i} className="px-4 py-3 text-left text-xs font-medium text-white uppercase">
                   P{i + 1}
@@ -183,6 +199,9 @@ export default function OtherData() {
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.sexo || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.departamento || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.universidad || 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.carrera || 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.ciclo || 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{formatTime(user.testDuration) || 'N/A'}</td>
                 {Array.from({ length: 30 }, (_, i) => (
                   <td key={i} className="px-4 py-3 whitespace-nowrap">
                     {user.answers[i + 1] ? 'Sí' : 'No'}

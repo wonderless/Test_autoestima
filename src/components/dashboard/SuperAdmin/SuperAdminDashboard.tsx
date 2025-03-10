@@ -11,7 +11,7 @@ const SuperAdminDashboard = () => {
         return <ListaAdmin />;
       default:
         return <div>Seleccione una opción</div>;
-    }
+    } 
   };
 
   return (
@@ -35,7 +35,7 @@ const SuperAdminDashboard = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 p-10 bg-celeste">{renderContent()}</div>
+      <div className="flex-1 p-10 bg-celeste overflow-y-auto">{renderContent()}</div>
     </div>
   );
 };

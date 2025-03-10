@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import admin from 'firebase-admin';
 
-// Inicializar Firebase Admin con una configuración más simple
+// Inicializar Firebase Admin con una configu          ración más simple
 if (!admin.apps.length) {
   try {
     admin.initializeApp({
@@ -10,7 +10,6 @@ if (!admin.apps.length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
-      // Quita cualquier otra configuración que puedas tener aquí
     });
     console.log("Firebase Admin inicializado correctamente");
   } catch (error) {
@@ -18,38 +17,37 @@ if (!admin.apps.length) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function DELETE(req: NextRequest) {
   try {
-    // Extraer datos del cuerpo de la solicitud
-    const { email, password, invitationCode } = await req.json();
+    // Extraer el UID del usuario de los parámetros de la URL o del body
+    const { searchParams } = new URL(req.url);
+    const uid = searchParams.get('uid');
     
-    // Validar datos requeridos
-    if (!email || !password) {
+    // Si no hay UID en los parámetros, intentamos obtenerlo del body
+    let userUid = uid;
+    if (!userUid) {
+      const body = await req.json();
+      userUid = body.uid;
+    }
+    
+    // Validar que se proporcionó un UID
+    if (!userUid) {
       return NextResponse.json(
-        { error: "Email y contraseña son requeridos" }, 
+        { error: "UID del usuario es requerido" }, 
         { status: 400 }
       );
     }
     
-    // Crear usuario con Firebase Admin SDK
-    const userRecord = await admin.auth().createUser({
-      email,
-      password,
-      emailVerified: false,
-    });
+    // Eliminar usuario usando Firebase Admin SDK
+    await admin.auth().deleteUser(userUid);
     
-    // Devolver respuesta exitosa con los datos del usuario
+    // Devolver respuesta exitosa
     return NextResponse.json({ 
-      message: "Administrador creado exitosamente", 
-      user: {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        role: 'admin'
-      } 
-    }, { status: 201 });
+      message: "Administrador eliminado exitosamente de Authentication"
+    }, { status: 200 });
     
   } catch (error) {
-    console.error("Error al crear administrador:", error);
+    console.error("Error al eliminar administrador:", error);
     
     // Manejar el error y devolver una respuesta adecuada
     if (error instanceof Error) {
@@ -61,7 +59,7 @@ export async function POST(req: NextRequest) {
     
     // Error genérico
     return NextResponse.json(
-      { error: "Error desconocido al crear administrador" }, 
+      { error: "Error desconocido al eliminar administrador" }, 
       { status: 500 }
     );
   }
