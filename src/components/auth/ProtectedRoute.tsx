@@ -25,7 +25,7 @@ useEffect(() => {
   if (!loading) {
     if (!user) {
       console.log('ProtectedRoute - No user, redirecting to home');
-      router.push('/');
+      router.push('/home');
       return;
     }
     
@@ -58,7 +58,7 @@ useEffect(() => {
     
     if (!hasRequiredRole) {
       console.log('ProtectedRoute - Access denied, redirecting to home');
-      router.push('/');
+      router.push('/home');
       return;
     }
     
