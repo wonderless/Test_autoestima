@@ -84,9 +84,9 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-6 max-w-lg bg-celeste rounded-xl shadow-md flex flex-col items-center">
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
       <h1 className="text-center text-2xl font-bold mb-4">Test de Autoestima General (TAG)</h1>
-
+ 
       <div className="mb-4 text-center">
         <h2 className="text-lg font-semibold">AUTOR:</h2>
         <p>Dr. Alex Grajeda Montalvo</p>
@@ -102,12 +102,14 @@ const UserDashboard = () => {
             </p>
           </div>
 
-          <button
-            onClick={handleStartTest}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Iniciar Test
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={handleStartTest}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Iniciar Test
+            </button>
+          </div>
         </>
       ) : (
         <div className="mb-4 text-center">
