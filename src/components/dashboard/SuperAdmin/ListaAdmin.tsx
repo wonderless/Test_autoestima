@@ -260,20 +260,23 @@ const ListaAdmin: React.FC = () => {
             {showPassword[admin.id] ? admin.password : "********"}
           </td>
           <td className="border p-2 border-black">
-            <button 
-              onClick={() => togglePasswordVisibility(admin.id)}
-              className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition-colors"
-            >
-              {showPassword[admin.id] ? "Ocultar" : "Mostrar"}
-            </button>
-            <button
-              onClick={() => handleDeleteAdmin(admin.id)}
-              disabled={loading}
-              className="bg-red-500 text-white px-2 py-1 rounded ml-2 hover:bg-red-600 transition-colors"
-            >
-              Eliminar
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button 
+                onClick={() => togglePasswordVisibility(admin.id)}
+                className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition-colors"
+              >
+                {showPassword[admin.id] ? "Ocultar" : "Mostrar"}
+              </button>
+              <button
+                onClick={() => handleDeleteAdmin(admin.id)}
+                disabled={loading}
+                className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+              >
+                Eliminar
+              </button>
+            </div>
           </td>
+
         </tr>
       ))}
     </tbody>

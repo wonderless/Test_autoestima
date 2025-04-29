@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-
+ 
 interface PersonalInfo {
   nombres: string;
   apellidos: string;
@@ -100,9 +100,10 @@ export default function RegisterForm() {
     }
   };
 
+
   return (
-    
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
+    <div className="min-h-screen w-full bg-mi-color-rgb flex flex-col items-center justify-center p-4">
+      <div className="bg-celeste p-8 rounded-lg shadow-md w-full max-w-md mx-auto my-8">
         <h2 className="text-2xl font-bold text-center mb-6">Registro de Usuario</h2>
         
         {error && (
@@ -330,13 +331,11 @@ export default function RegisterForm() {
                 type="button"
                 onClick={handleNextStep}
                 disabled={!isEmailValid}
-                className={`w-full mb-4 py-2 px-4 rounded-md transition 
+                className={`w-full py-2 px-4 rounded-md transition 
                             ${isEmailValid ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 cursor-not-allowed'}`}
               >
                 Siguiente
               </button> 
-  
-
             ) : (
               <button
                 type="submit"
@@ -350,7 +349,7 @@ export default function RegisterForm() {
             )}
           </div>
         </form>
-      </div> 
-   
+      </div>
+    </div>
   );
 }

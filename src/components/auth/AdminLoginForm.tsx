@@ -43,7 +43,7 @@ export default function AdminLoginForm() {
   };
   
   return (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md max-h-[80vh] overflow-y-auto">
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
       <h2 className="text-2xl font-bold text-center mb-6">Iniciar Sesión como Administrador</h2>
       
       {error && (

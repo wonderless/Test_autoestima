@@ -26,7 +26,6 @@ const TestPage = () => {
         // Verificar si tiene el testStartTime en localStorage
         const testStartTime = localStorage.getItem('testStartTime');
         if (!testStartTime) {
-          console.log('No se encontró tiempo de inicio del test, redirigiendo al dashboard');
           router.push('/dashboard/user');
           return;
         }
@@ -83,8 +82,7 @@ const TestPage = () => {
           }
         }
         
-        // Si llega aquí, puede hacer el test
-        console.log('Usuario puede hacer el test');
+
         setCanAccess(true);
         setLoading(false);
       } catch (error) {
