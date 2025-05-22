@@ -175,10 +175,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   const validateInvitationCode = async (code: string): Promise<string | null> => {
     try {
+      console.log("--------------------------1")
       const adminCollection = collection(db, "admins");
       const q = query(adminCollection, where("invitationCode", "==", code));
       const querySnapshot = await getDocs(q);
-      
+      console.log("--------------------------2")
       if (querySnapshot.empty) {
         throw new Error("Código de invitación inválido");
       }
@@ -199,6 +200,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     personalInfo: UserData['personalInfo']
   ) => {
     try {
+      console.log("------------------------------------")
       // Store current user info to maintain the session
       const currentUser = auth.currentUser;
       

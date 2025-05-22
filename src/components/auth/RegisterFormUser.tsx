@@ -91,7 +91,7 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      await registerUser(email, password, invitationCode, personalInfo);
+      await registerUser(email, password, '6BM5IWJH', personalInfo);
       router.push('/dashboard/user');
     } catch (err: any) {
       setError(err.message || 'Error al registrar usuario');
@@ -127,6 +127,7 @@ export default function RegisterForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {step === 1 ? (
             <>
+            {/*
               <div>
                 <label htmlFor="invitationCode" className="block text-sm font-medium text-gray-700 mb-1">
                   Código de Invitación
@@ -140,7 +141,7 @@ export default function RegisterForm() {
                   required
                 />
               </div>
-
+            */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Correo Electrónico
