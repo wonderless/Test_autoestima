@@ -28,6 +28,7 @@ interface UserData {
   };
 }
 
+// En tu AuthContext.tsx, actualiza la interfaz:
 interface AuthContextType {
   user: UserData | null;
   loading: boolean;
@@ -38,7 +39,7 @@ interface AuthContextType {
     password: string,
     invitationCode: string,
     personalInfo: UserData['personalInfo']
-  ) => Promise<void>;
+  ) => Promise<UserData>; // Cambiado de Promise<void> a Promise<UserData>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -191,52 +192,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error("Error al validar el código de invitación");
     }
   };
-  
-  // Modified function to prevent auto sign-in
   const registerUser = async (
-    email: string,
-    password: string,
-    invitationCode: string,
-    personalInfo: UserData['personalInfo']
-  ) => {
-    try {
-      console.log("------------------------------------")
-      // Store current user info to maintain the session
-      const currentUser = auth.currentUser;
-      
-      // 1. Validar el código de invitación y obtener el ID del admin
-      const adminId = await validateInvitationCode(invitationCode);
-      if (!adminId) {
-        throw new Error("Código de invitación inválido");
-      }
-
-      // 2. Crear el usuario en Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-
-      // 3. Crear el documento del usuario en la colección 'users'
-      const userData = {
-        email,
-        role: 'user',
-        invitationCode, // Guardamos el código de invitación
-        adminId, // Guardamos el ID del admin que lo registró
-        personalInfo,
-      };
-
-      await setDoc(doc(db, "users", uid), userData);
-      
-      // 4. Re-authenticate as the admin user if they were previously logged in
-      if (currentUser && currentUser.email) {
-        // We'll need to prompt for the admin's password to do this correctly
-        // For now, we'll force a refresh on the current auth state
-        await currentUser.reload();
-      }
-
-    } catch (error: any) {
-      console.error("Error en el registro:", error);
-      throw new Error(error.message || "Error en el registro");
+  email: string,
+  password: string,
+  invitationCode: string,
+  personalInfo: UserData['personalInfo']
+): Promise<UserData> => {
+  try {
+    // 1. Validar código de invitación
+    const adminId = await validateInvitationCode(invitationCode);
+    if (!adminId) {
+      throw new Error("Código de invitación inválido");
     }
-  };
+
+    // 2. Crear usuario en Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = userCredential.user.uid;
+
+    // 3. Crear documento en Firestore
+    const userData: UserData = {
+      uid,
+      email,
+      role: 'user',
+      invitationCode,
+      adminId,
+      personalInfo,
+    };
+
+    await setDoc(doc(db, "users", uid), userData);
+
+    // 4. Esperar sincronización (500ms es suficiente)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return userData;
+  } catch (error: any) {
+    console.error("Error en el registro:", error);
+    throw error;
+  }
+};
 
   const signOut = async () => {
     try {

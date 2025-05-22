@@ -85,21 +85,24 @@ export default function RegisterForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      await registerUser(email, password, '6BM5IWJH', personalInfo);
-      router.push('/dashboard/user');
-    } catch (err: any) {
-      setError(err.message || 'Error al registrar usuario');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  try {
+    // Registrar usuario y esperar a que complete
+    await registerUser(email, password, '6BM5IWJH', personalInfo);
+    
+    // Redirigir después de una breve espera (1 segundo es suficiente)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    router.push('/dashboard/user');
+  } catch (err: any) {
+    setError(err.message || 'Error al registrar usuario');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen w-full bg-mi-color-rgb flex flex-col items-center justify-center p-4">
