@@ -87,7 +87,7 @@ export const allRecommendations: AllRecommendations = {
           { question: "¿Identificaste aspectos positivos de tu cuerpo que antes no valorabas?", key: "agradecimientoCorporalQ1" }
         ],
         relatedQuestion: 9
-      },
+      }, 
 
       // Pregunta 12
       {

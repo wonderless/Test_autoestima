@@ -187,6 +187,7 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
   };
 
   const moveToNextQuestion = async (category: string) => {
+    console.log('⭐ moveToNextQuestion called for category:', category, 'prevIndex:', recommendationStatus[category]?.currentQuestionIndex);
     setRecommendationStatus(prevStatus => {
       const newStatus = { ...prevStatus };
       const currentCategoryStatus = { ...newStatus[category] };
@@ -210,6 +211,8 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
 
 const handleOnMarkActivityComplete = async (category: string, recommendationId: string, activityIndex: number) => {
   console.log('🔄 Completing activity:', { category, recommendationId, activityIndex });
+  const prevQuestionIndex = recommendationStatus[category]?.currentQuestionIndex ?? 0;
+  console.log('🐞 handleOnMarkActivityComplete: recommendationStatus for category before update:', recommendationStatus[category]);
   
   setRecommendationStatus(prevStatus => {
     const newStatus = { ...prevStatus };
@@ -246,7 +249,7 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
           // Si aún hay más actividades que mostrar
           if (nextActivityIndex < currentRec.activities!.length) {
             recProgress.currentActivityIndex = nextActivityIndex;
-            console.log(`✅ Moving to activity ${nextActivityIndex + 1} of ${currentRec.activities!.length}`);
+            console.log(`✅ Moving to activity ${nextActivityIndex } of ${currentRec.activities!.length}`);
           } else {
             // Si completó todas las actividades
             recProgress.isCompleted = true;
@@ -293,8 +296,8 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
 
     // Solo avanzar a la siguiente pregunta si TODAS las recomendaciones están completas
     if (allCompleted && recProgress.isCompleted) {
-      console.log('🚀 Moving to next question');
-      setTimeout(() => moveToNextQuestion(category), 2000);
+      console.log('🚀 Advancing to next question inline');
+      currentCategoryStatus.currentQuestionIndex += 1;
     }
 
     return newStatus;
@@ -319,6 +322,7 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
           currentActivityIndex: isCompleted ? totalActivities : newIndex,
           isCompleted
         },
+        [`recommendationProgress.${category}.currentQuestionIndex`]: prevQuestionIndex + 1
       });
     }
   } catch (error) {
