@@ -736,26 +736,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
                   ) : (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
                       <p>¡Has completado todas las actividades para esta categoría!</p>
-                      <button 
-                        onClick={() => {
-                          setRecommendationStatus(prev => ({
-                            ...prev,
-                            [category]: {
-                              ...prev[category],
-                              currentQuestionIndex: 0,
-                              recommendationProgress: Object.fromEntries(
-                                Object.entries(prev[category].recommendationProgress).map(([id, progress]) => [
-                                  id,
-                                  { ...progress, currentActivityIndex: 0, isCompleted: false }
-                                ])
-                              )
-                            }
-                          }));
-                        }}
-                        className="mt-2 bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-sm"
-                      >
-                        Reiniciar actividades
-                      </button>
                     </div>
                   )}
                 </>
