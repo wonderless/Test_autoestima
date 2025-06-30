@@ -1,18 +1,15 @@
-
 import { correctAnswers as importedCorrectAnswers } from '@/lib/correctAnswers';
 import { allRecommendations, getDetailedRecommendations, RecommendationItem, FeedbackQuestion } from "../../constants/recommendations";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { questions as allTestQuestions } from "../../constants/questions";
 import PsychologicalProfile from './PsychologicalProfile';
 
-
 interface CategoryScore {
   score: number;
   level: 'ALTO' | 'MEDIO' | 'BAJO';
 }
-
 
 interface Results {
   personal: CategoryScore;
@@ -21,12 +18,10 @@ interface Results {
   fisico: CategoryScore;
 }
 
-
 interface Props {
   userId: string;
   userInfo: any;
 }
-
 
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
@@ -34,7 +29,6 @@ const categoryQuestions = {
   academico: [1, 4, 14, 15, 16, 25],
   fisico: [7, 9, 12, 18, 21, 28]
 };
-
 
 interface RecommendationStatus {
   [category: string]: {
@@ -51,13 +45,11 @@ interface RecommendationStatus {
   };
 }
 
-
 const calculateCategoryScore = (answers: Record<number, boolean>, questionNumbers: number[]): number => {
   return questionNumbers.reduce((score, questionNum) => {
     return score + (answers[questionNum] === importedCorrectAnswers[questionNum] ? 1 : 0);
   }, 0);
 };
-
 
 const determineLevel = (score: number): 'ALTO' | 'MEDIO' | 'BAJO' => {
   if (score >= 5) return 'ALTO';
@@ -65,13 +57,11 @@ const determineLevel = (score: number): 'ALTO' | 'MEDIO' | 'BAJO' => {
   return 'BAJO';
 }
 
-
 const determineGeneralLevel = (totalScore: number): 'ALTO' | 'MEDIO' | 'BAJO' => {
   if (totalScore >= 20) return 'ALTO';
   if (totalScore >= 9) return 'MEDIO';
   return 'BAJO';
 };
-
 
 export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const router = useRouter();
@@ -85,8 +75,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [currentFeedbackRec, setCurrentFeedbackRec] = useState<RecommendationItem | null>(null);
   const [feedbackAnswers, setFeedbackAnswers] = useState<Record<string, boolean>>({});
-  const autoAdvanceRefs = useRef<{ [category: string]: number }>({});
-
 
 const RecommendationDisplay: React.FC<{
   recommendation: RecommendationItem;
@@ -100,21 +88,21 @@ const RecommendationDisplay: React.FC<{
 console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIndex=${currentRecommendationProgress.currentActivityIndex}, isCompleted=${currentRecommendationProgress.isCompleted}`);
   // Manejar casos donde activities no está definido
   const hasActivities = recommendation.activities && recommendation.activities.length > 0;
-  const currentActivity = hasActivities
+  const currentActivity = hasActivities 
     ? recommendation.activities![currentRecommendationProgress.currentActivityIndex]
     : null;
-  const isLastActivity = hasActivities
+  const isLastActivity = hasActivities 
     ? currentRecommendationProgress.currentActivityIndex === recommendation.activities!.length - 1
     : true;
   const isRecommendationCompleted = currentRecommendationProgress.isCompleted || !hasActivities;
-
 
   const handleNextActivity = () => {
     onMarkActivityComplete(categoryKey, recommendation.id, currentRecommendationProgress.currentActivityIndex);
   };
 
-
-
+  const handleResetRecommendation = () => {
+    onMarkActivityComplete(categoryKey, recommendation.id, -1);
+  };
 
   return (
     <div className={`recommendation-card ${isRecommendationCompleted ? 'completed-rec' : ''}`}>
@@ -125,9 +113,7 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
 </p>
       )}
 
-
       <p className="mb-3 text-gray-700">{recommendation.description}</p>
-
 
       {!isRecommendationCompleted && hasActivities ? (
         <>
@@ -135,7 +121,6 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
           <div className="bg-blue-50 p-3 rounded-md mb-4 border border-blue-200">
             <p dangerouslySetInnerHTML={{ __html: currentActivity! }}></p>
           </div>
-
 
           <div className="flex items-center justify-between">
             <button
@@ -151,20 +136,38 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
           <p className="text-green-700 font-semibold mb-3">
             {hasActivities ? '¡Recomendación Completada!' : 'Recomendación'}
           </p>
-         
-         
+          
+          {hasActivities && (
+            <button
+              onClick={handleResetRecommendation}
+              className="px-4 py-2 rounded-md bg-gray-500 text-white font-medium hover:bg-gray-600 transition-colors"
+            >
+              Reiniciar Recomendación
+            </button>
+          )}
+          
+          {recommendation.feedbackQuestions && recommendation.feedbackQuestions.length > 0 && (
+            <button
+              onClick={() => {
+                setCurrentFeedbackRec(recommendation);
+                setFeedbackAnswers({});
+                setShowFeedbackModal(true);
+              }}
+              className={`px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors ${hasActivities ? 'ml-2' : ''}`}
+            >
+              Ver Retroalimentación
+            </button>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-
   const saveResultsToFirebase = async (resultsData: Results, answers: Record<number, boolean>) => {
     try {
       const db = getFirestore();
       const userRef = doc(db, 'users', userId);
-
 
       const testResults = {
         testResults: {
@@ -176,7 +179,6 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
         answers: answers,
       };
 
-
       await updateDoc(userRef, testResults);
     } catch (err) {
       console.error('Error saving results:', err);
@@ -184,19 +186,17 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
     }
   };
 
-
   const moveToNextQuestion = async (category: string) => {
     console.log('⭐ moveToNextQuestion called for category:', category, 'prevIndex:', recommendationStatus[category]?.currentQuestionIndex);
     setRecommendationStatus(prevStatus => {
       const newStatus = { ...prevStatus };
       const currentCategoryStatus = { ...newStatus[category] };
-     
+      
       currentCategoryStatus.currentQuestionIndex += 1;
-     
+      
       newStatus[category] = currentCategoryStatus;
       return newStatus;
     });
-
 
     try {
       const db = getFirestore();
@@ -209,17 +209,15 @@ console.log(`Rendering RecommendationDisplay: id=${recommendation.id}, currentIn
     }
   };
 
-
 const handleOnMarkActivityComplete = async (category: string, recommendationId: string, activityIndex: number) => {
   console.log('🔄 Completing activity:', { category, recommendationId, activityIndex });
   const prevQuestionIndex = recommendationStatus[category]?.currentQuestionIndex ?? 0;
   console.log('🐞 handleOnMarkActivityComplete: recommendationStatus for category before update:', recommendationStatus[category]);
- 
+  
   setRecommendationStatus(prevStatus => {
     const newStatus = { ...prevStatus };
     const currentCategoryStatus = { ...newStatus[category] };
     const recProgress = { ...currentCategoryStatus.recommendationProgress[recommendationId] };
-
 
     if (activityIndex === -1) {
       // Reiniciar recomendación
@@ -234,10 +232,9 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
       );
       const currentRec = recsForCategory.find(r => r.id === recommendationId);
 
-
       if (currentRec) {
         const hasActivities = currentRec.activities && currentRec.activities.length > 0;
-       
+        
         console.log('📝 Current rec info:', {
           id: currentRec.id,
           hasActivities,
@@ -245,11 +242,10 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
           currentIndex: recProgress.currentActivityIndex
         });
 
-
         if (hasActivities) {
           // CLAVE: Incrementar DESPUÉS de completar la actividad actual
           const nextActivityIndex = activityIndex + 1;
-         
+          
           // Si aún hay más actividades que mostrar
           if (nextActivityIndex < currentRec.activities!.length) {
             recProgress.currentActivityIndex = nextActivityIndex;
@@ -258,7 +254,7 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
             // Si completó todas las actividades
             recProgress.isCompleted = true;
             console.log('🎉 All activities completed for this recommendation');
-           
+            
             // Mostrar feedback solo si hay preguntas de feedback
             if (currentRec.feedbackQuestions && currentRec.feedbackQuestions.length > 0) {
               setTimeout(() => {
@@ -274,10 +270,8 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
       }
     }
 
-
     currentCategoryStatus.recommendationProgress[recommendationId] = recProgress;
     newStatus[category] = currentCategoryStatus;
-
 
     // Verificar si todas las recomendaciones de la pregunta actual están completas
     const currentQuestionNum = categoryQuestions[category as keyof typeof categoryQuestions][currentCategoryStatus.currentQuestionIndex];
@@ -287,12 +281,11 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
       userTestAnswers!
     );
     const allRecsForQuestion = recsForCategory.filter(r => r.relatedQuestion === currentQuestionNum);
-   
+    
     const allCompleted = allRecsForQuestion.every(r => {
       const updatedRecProgress = newStatus[category].recommendationProgress[r.id];
       return updatedRecProgress?.isCompleted || !(r.activities && r.activities.length > 0);
     });
-
 
     console.log('📊 Question completion check:', {
       currentQuestionNum,
@@ -300,65 +293,49 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
       completedRecs: allRecsForQuestion.filter(r => newStatus[category].recommendationProgress[r.id]?.isCompleted).length,
       allCompleted
     });
-    // 🧐 Skip empty questions and advance to next with recommendations
-    if (allCompleted) {
-      const qList = categoryQuestions[category as keyof typeof categoryQuestions];
-      let nextIdx = currentCategoryStatus.currentQuestionIndex + 1;
-      const total = qList.length;
-      while (nextIdx < total) {
-        const nextQNum = qList[nextIdx];
-        const recsNext = getRecommendationsForCategory(
-          category,
-          currentCategoryStatus.categoryLevel,
-          currentCategoryStatus.userAnswers
-        ).filter(r =>
-          r.relatedQuestion === nextQNum &&
-          !currentCategoryStatus.recommendationProgress[r.id]?.isCompleted
-        );
-        if (recsNext.length > 0) break;
-        nextIdx++;
-      }
-      if (nextIdx < total) {
-        console.log('🧐 Skipping to question index:', nextIdx);
-        currentCategoryStatus.currentQuestionIndex = nextIdx;
-      } else {
-        console.log('🧐 No more recommendations, marking category complete');
-        currentCategoryStatus.currentQuestionIndex = total;
-      }
-    }
-
 
     // Solo avanzar a la siguiente pregunta si TODAS las recomendaciones están completas
-    // Inline auto-advance removed to prevent render loops; handled by guard above
+    if (allCompleted && recProgress.isCompleted) {
+      console.log('🚀 Advancing to next question inline');
+      currentCategoryStatus.currentQuestionIndex += 1;
+    }
 
-
-    console.log('🧐 Updated status for category', category, newStatus[category]);
     return newStatus;
   });
-
 
   // Guardar en Firebase (simplificado)
   try {
     const db = getFirestore();
     const userRef = doc(db, 'users', userId);
-   
+    
     // Obtener el estado actual después de la actualización
     const currentRecProgress = recommendationStatus[category]?.recommendationProgress[recommendationId];
     if (currentRecProgress) {
-      const newIndex = activityIndex === -1 ? 0 : activityIndex + 1;
-      const recsForCategory = getRecommendationsForCategory(category, recommendationStatus[category].categoryLevel, userTestAnswers!);
-      const currentRec = recsForCategory.find(r => r.id === recommendationId);
-      const totalActivities = currentRec?.activities?.length || 0;
-      const isCompleted = activityIndex === -1 ? false : newIndex >= totalActivities;
-     
-      await updateDoc(userRef, {
-        [`recommendationProgress.${category}.recommendationProgress.${recommendationId}`]: {
-          currentActivityIndex: isCompleted ? totalActivities : newIndex,
-          isCompleted
-        },
-        [`recommendationProgress.${category}.currentQuestionIndex`]: prevQuestionIndex + 1
-      });
- 
+        const newIndex = activityIndex === -1 ? 0 : activityIndex + 1;
+        const recsForCategory = getRecommendationsForCategory(category, recommendationStatus[category].categoryLevel, userTestAnswers!);
+        const currentRec = recsForCategory.find(r => r.id === recommendationId);
+        const totalActivities = currentRec?.activities?.length || 0;
+        const isCompleted = activityIndex === -1 ? false : newIndex >= totalActivities;
+        
+        console.log('💾 Firebase save values:', {
+          category,
+          recommendationId,
+          newIndex,
+          totalActivities,
+          isCompleted,
+          nextQuestionIndex: prevQuestionIndex + 1
+        });
+        const updateData: any = {
+          [`recommendationProgress.${category}.recommendationProgress.${recommendationId}`]: {
+            currentActivityIndex: isCompleted ? totalActivities : newIndex,
+            isCompleted
+          }
+        };
+        if (isCompleted) {
+          updateData[`recommendationProgress.${category}.currentQuestionIndex`] = prevQuestionIndex + 1;
+          console.log('💾 Advancing question index in Firebase:', { category, nextQuestionIndex: prevQuestionIndex + 1 });
+        }
+        await updateDoc(userRef, updateData);
     }
   } catch (error) {
     console.error('Error saving recommendation activity progress:', error);
@@ -367,20 +344,14 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
 
 
 
-
-
-
   const handleFeedbackSubmit = (questionKey: string, answer: boolean) => {
     setFeedbackAnswers(prev => ({ ...prev, [questionKey]: answer }));
   };
 
-
   const submitAllFeedback = async () => {
     if (!currentFeedbackRec || !currentFeedbackRec.feedbackQuestions) return;
 
-
     const allAnswered = currentFeedbackRec.feedbackQuestions.every(q => feedbackAnswers.hasOwnProperty(q.key));
-
 
     if (allAnswered) {
       try {
@@ -403,46 +374,38 @@ const handleOnMarkActivityComplete = async (category: string, recommendationId: 
 
 
 
-
-
-
-
 const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO' | 'BAJO', answers: Record<number, boolean>) => {
   // Para niveles ALTO y MEDIO, devolver solo las recomendaciones generales
   if (level !== 'BAJO') {
     return allRecommendations[category as keyof typeof allRecommendations][level] || [];
   }
- 
+  
   // Para nivel BAJO, devolver solo las recomendaciones específicas por pregunta respondida incorrectamente
   const questionNumbers = categoryQuestions[category as keyof typeof categoryQuestions];
   const questionBasedRecs: RecommendationItem[] = [];
- 
+  
   questionNumbers.forEach(questionNum => {
     const userAnswer = answers[questionNum];
     const correctAnswer = importedCorrectAnswers[questionNum];
-   
+    
     // Solo agregar recomendaciones si la respuesta fue incorrecta
     if (userAnswer !== correctAnswer) {
       const questionRecs = (allRecommendations[category as keyof typeof allRecommendations]['BAJO'] as RecommendationItem[])
         .filter(rec => rec.relatedQuestion === questionNum);
-     
+      
       questionBasedRecs.push(...questionRecs);
     }
   });
- 
+  
   // Si no hay recomendaciones específicas, devolver las generales de nivel BAJO
   if (questionBasedRecs.length === 0) {
     const generalRecs = (allRecommendations[category as keyof typeof allRecommendations]['BAJO'] as RecommendationItem[])
       .filter(rec => !rec.relatedQuestion); // Solo las que NO tienen pregunta relacionada
     return generalRecs;
   }
- 
+  
   return questionBasedRecs;
 };
-
-
-
-
 
 
 
@@ -457,34 +420,27 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
     }));
   };
 
-
   useEffect(() => {
-      console.log('🧐 auto-advance detailed status', recommendationStatus);
     const db = getFirestore();
-
 
     const fetchAndProcessResults = async () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', userId));
         const userData = userDoc.data();
 
-
         if (!userData?.answers) {
           setError('No se encontraron respuestas del test');
           return;
         }
 
-
         const answers = userData.answers;
         setUserTestAnswers(answers);
         const veracityScore = userData.veracityScore || 0;
-
 
         if (veracityScore >= 3) {
           setIsVeracityValid(false);
           return;
         }
-
 
         const calculatedResults: Results = {
           personal: {
@@ -505,7 +461,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
           },
         };
 
-
         let totalScore = 0;
         Object.keys(calculatedResults).forEach((category) => {
           const score = calculatedResults[category as keyof Results].score;
@@ -514,24 +469,18 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
           totalScore += score;
         });
 
-
         const calculatedGeneralLevel = determineGeneralLevel(totalScore);
         setGeneralLevel(calculatedGeneralLevel);
         setResults(calculatedResults);
 
-
         await saveResultsToFirebase(calculatedResults, answers);
 
-
         const savedRecommendationProgress = userData?.recommendationProgress || {};
-
 
         const initialRecommendationStatus: RecommendationStatus = {};
         Object.keys(calculatedResults).forEach(category => {
           const catLevel = calculatedResults[category as keyof Results].level;
           const recs = getRecommendationsForCategory(category, catLevel, answers);
-
-
 
 
           const categoryRecProgress: { [id: string]: { currentActivityIndex: number; isCompleted: boolean; } } = {};
@@ -543,7 +492,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
             };
           });
 
-
           initialRecommendationStatus[category] = {
             isOpen: savedRecommendationProgress[category]?.isOpen !== undefined ? savedRecommendationProgress[category]?.isOpen : true,
             userAnswers: answers,
@@ -554,30 +502,20 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
         });
         setRecommendationStatus(initialRecommendationStatus);
 
-
       } catch (error) {
         console.error('Error processing results:', error);
         setError('Hubo un error al procesar tus resultados.');
       }
     };
 
-
     fetchAndProcessResults();
   }, [userId]);
-
-
-
-
-
-
-
 
   const getLevelClass = (level: string): string => {
     if (level === 'ALTO') return 'bg-green-100 text-green-800';
     if (level === 'MEDIO') return 'bg-yellow-100 text-yellow-800';
     return 'bg-red-100 text-red-800';
   };
-
 
   const getLevelColor = (level: 'ALTO' | 'MEDIO' | 'BAJO'): string => {
     switch (level) {
@@ -588,7 +526,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
     }
   };
 
-
   if (error) {
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -598,7 +535,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
       </div>
     )
   }
-
 
   if (!isVeracityValid) {
     return (
@@ -656,11 +592,9 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
     )
   }
 
-
   if (!results || !userTestAnswers || Object.keys(recommendationStatus).length === 0) {
     return <div className="text-center text-white">Cargando resultados y recomendaciones...</div>;
   }
-
 
   return (
     <div className="w-full px-4">
@@ -668,14 +602,12 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
         Resultados del Test de Autoestima
       </h1>
 
-
       <div className="text-center text-lg font-bold mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
         <span className={getLevelColor(generalLevel || 'MEDIO')}>
           {generalLevel}
         </span>
       </div>
-
 
       <PsychologicalProfile
         results={results}
@@ -686,11 +618,9 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
         fisicoY={calculatePointCoordinate(results.fisico.score, 250, 1)}
       />
 
-
       <h1 className="text-3xl font-bold text-center mt-6 mb-6 text-white">
         Recomendaciones Personalizadas
       </h1>
-
 
      <div className="grid grid-cols-1 gap-6 w-full">
         {Object.entries(results).map(([category, data]) => {
@@ -702,10 +632,7 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
 );
 
 
-
-
           if (!status) return null;
-
 
           // Para niveles MEDIO y ALTO, mostramos solo el mensaje general
           if (data.level !== 'BAJO') {
@@ -725,7 +652,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
                   </div>
                 </div>
 
-
                 {recommendationsForCategory.map(rec => (
                   <div key={rec.id} className="mt-4 p-4 bg-white rounded-md">
                     <h3 className="font-semibold text-lg">{rec.title}</h3>
@@ -737,19 +663,15 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
           }
 
 
-
-
           // Para nivel BAJO, mostramos el sistema completo de actividades
           const currentQuestionNum = categoryQuestions[category as keyof typeof categoryQuestions][status.currentQuestionIndex];
           const currentRecommendations = recommendationsForCategory.filter(
-            rec => rec.relatedQuestion === currentQuestionNum && !status.recommendationProgress[rec.id]?.isCompleted
+            rec => rec.relatedQuestion === currentQuestionNum || !rec.relatedQuestion
           );
 
-
           const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
-         
           const isLastQuestion = status.currentQuestionIndex >= allQuestions.length - 1;
-          const allRecommendationsCompleted = currentRecommendations.every(rec =>
+          const allRecommendationsCompleted = currentRecommendations.every(rec => 
             status.recommendationProgress[rec.id]?.isCompleted
           );
     return (
@@ -762,7 +684,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
                 <span className="text-2xl">{status.isOpen ? '−' : '+'}</span>
               </button>
 
-
               {status.isOpen && (
                 <>
                   <div className="space-y-4 mb-6">
@@ -773,12 +694,10 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
                       </span>
                     </div>
 
-
                     <div className="flex items-center justify-between">
                       <span className="font-medium">Puntuación:</span>
                       <span>{data.score}/6</span>
                     </div>
-
 
                     <div className="mb-4">
                       <div className="flex justify-between items-center">
@@ -788,34 +707,43 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full"
-                          style={{
-                            width: `${(status.currentQuestionIndex / allQuestions.length) * 100}%`
+                        <div 
+                          className="bg-blue-600 h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${(status.currentQuestionIndex / allQuestions.length) * 100}%` 
                           }}
                         ></div>
                       </div>
                     </div>
                   </div>
 
-
                   {status.currentQuestionIndex < allQuestions.length ? (
                     <>
 
 
-
-
-                      {currentRecommendations.length > 0 && currentRecommendations.map((rec) => (
-                        status.recommendationProgress[rec.id] && (
-                          <RecommendationDisplay
-                            key={rec.id}
-                            recommendation={rec}
-                            categoryKey={category}
-                            onMarkActivityComplete={handleOnMarkActivityComplete}
-                            currentRecommendationProgress={status.recommendationProgress[rec.id]}
-                          />
-                        )
-                      ))}
+                      {currentRecommendations.length > 0 ? (
+                        currentRecommendations.map((rec) => (
+                          status.recommendationProgress[rec.id] && (
+                            <RecommendationDisplay
+                              key={rec.id}
+                              recommendation={rec}
+                              categoryKey={category}
+                              onMarkActivityComplete={handleOnMarkActivityComplete}
+                              currentRecommendationProgress={status.recommendationProgress[rec.id]}
+                            />
+                          )
+                        ))
+                      ) : (
+                        <div className="mb-4 p-4 bg-green-100 border border-green-200 rounded-md">
+                          <p>No hay recomendaciones específicas para esta pregunta. Tu respuesta fue adecuada.</p>
+                          <button
+                            onClick={() => moveToNextQuestion(category)}
+                            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                          >
+                            Continuar a la siguiente pregunta
+                          </button>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
@@ -828,7 +756,6 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
           );
         })}
       </div>
-
 
       {showFeedbackModal && currentFeedbackRec && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -884,9 +811,7 @@ const getRecommendationsForCategory = (category: string, level: 'ALTO' | 'MEDIO'
   );
 };
 
-
 function calculatePointCoordinate(score: number, baseCoord: number, direction: 1 | -1): number {
   const distance = 25 * (6 - score);
   return baseCoord + (direction * distance);
 }
-
