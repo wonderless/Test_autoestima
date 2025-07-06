@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import {
   collection,
   doc,
@@ -217,11 +218,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     code: string
   ): Promise<string | null> => {
     try {
-      console.log("--------------------------1");
       const adminCollection = collection(db, "admins");
       const q = query(adminCollection, where("invitationCode", "==", code));
       const querySnapshot = await getDocs(q);
-      console.log("--------------------------2");
       if (querySnapshot.empty) {
         throw new Error("Código de invitación inválido");
       }
@@ -271,21 +270,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // 5. Obtener token y establecer cookie de sesión
       const token = await userCredential.user.getIdToken();
-      console.log("RegisterUser: token=", token);
       const sessionRes = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      console.log("RegisterUser: sessionRes.ok=", sessionRes.ok);
       if (!sessionRes.ok) {
         throw new Error("Error al establecer la sesión");
       }
 
       return userData;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Si es un error de correo duplicado, lanzamos mensaje amigable y no logueamos el stack
+      if (
+        error instanceof FirebaseError &&
+        error.code === "auth/email-already-in-use"
+      ) {
+        console.warn("Registro duplicado detectado:", error.code);
+        throw new Error("Ya existe un usuario con ese correo electrónico.");
+      }
+      // Para otros errores, mostrar en consola
       console.error("Error en el registro:", error);
-      throw error;
+      if (error instanceof FirebaseError) {
+        throw new Error(error.message);
+      }
+      throw new Error("Error al registrar usuario");
     }
   };
 
