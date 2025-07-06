@@ -205,12 +205,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userData);
       return userData;
     } catch (error: any) {
-      console.error("Error en el inicio de sesión:", error);
-      throw new Error(
+      const isInvalidCredential =
         error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password"
-          ? "Credenciales inválidas"
-          : error.message
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential";
+      if (!isInvalidCredential) {
+        console.error("Error en el inicio de sesión:", error);
+      }
+      throw new Error(
+        isInvalidCredential ? "Credenciales inválidas" : error.message
       );
     }
   };
