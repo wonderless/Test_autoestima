@@ -78,7 +78,6 @@ export default function RegisterForm() {
   };
 
   const handleNextStep = () => {
-    console.log("handleNextStep called, current step:", step);
     setError("");
     if (step === 1 && validateStep1()) {
       setStep(2);
@@ -87,7 +86,6 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleSubmit called");
     setError("");
     setLoading(true);
 
