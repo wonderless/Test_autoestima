@@ -121,15 +121,9 @@ const TestPage = () => {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-yellow-800">
-                  Ya has realizado el test recientemente
+                  Para realizar otra vez el test debe terminar todas las
+                  actividades
                 </h3>
-                <div className="mt-2 text-sm text-yellow-700">
-                  <p>
-                    Para asegurar resultados precisos, podrás realizar el test
-                    nuevamente a partir del <strong>{nextAvailableDate}</strong>
-                    .
-                  </p>
-                </div>
                 <div className="mt-4">
                   <button
                     onClick={() => router.push("/results")}

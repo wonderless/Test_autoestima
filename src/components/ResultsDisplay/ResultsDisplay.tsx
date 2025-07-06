@@ -628,6 +628,37 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         return "";
     }
   };
+  // Detect when all categories are completed to show reset button
+  const allCategoriesCompleted = Boolean(
+    results &&
+      Object.entries(results).every(([category, data]) => {
+        if (data.level !== "BAJO") return true;
+        const allQs =
+          categoryQuestions[category as keyof typeof categoryQuestions];
+        return (
+          recommendationStatus[category]?.currentQuestionIndex >= allQs.length
+        );
+      })
+  );
+  const handleResetTest = async () => {
+    try {
+      localStorage.removeItem("testAnswers");
+      const db = getFirestore();
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        answers: {},
+        recommendationProgress: {},
+        activityFeedback: {},
+        testDuration: 0,
+        veracityScore: 0,
+        lastTestDate: null,
+      });
+      router.push("/test");
+    } catch (error) {
+      console.error("Error resetting test:", error);
+      router.push("/test");
+    }
+  };
 
   if (error) {
     return (
@@ -912,6 +943,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         })}
       </div>
 
+      {allCategoriesCompleted && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={handleResetTest}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Realizar Test Otra Vez
+          </button>
+        </div>
+      )}
       {showFeedbackModal && currentFeedbackRec && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
