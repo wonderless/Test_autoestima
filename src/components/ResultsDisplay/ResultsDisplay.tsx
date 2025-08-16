@@ -83,7 +83,7 @@ const determineGeneralLevel = (
 };
 
 // Función para formatear el tiempo restante
-const formatTimeRemaining = (seconds: number): string => {
+const formatTimeRemaining = (seconds: number, countdownStartTime?: number): string => {
   if (seconds <= 0) return "Tiempo completado";
   
   const hours = Math.floor(seconds / 3600);
@@ -94,6 +94,17 @@ const formatTimeRemaining = (seconds: number): string => {
   } else if (minutes >= 10) {
     return `Faltan ${minutes} minutos`;
   } else {
+    // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
+    if (countdownStartTime) {
+      const unlockTime = new Date(countdownStartTime + (countdownStartTime ? seconds * 1000 : 0));
+      const options: Intl.DateTimeFormatOptions = {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: 'numeric',
+        month: 'long'
+      };
+      return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
+    }
     return "Falta menos de 10 minutos";
   }
 };
@@ -458,7 +469,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               Las actividades del Día {currentProgress.currentDay + 1} estarán disponibles en:
             </p>
             <div className="text-3xl font-bold text-blue-700 mb-6">
-              {formatTimeRemaining(currentProgress.countdown!)}
+              {formatTimeRemaining(currentProgress.countdown!, currentProgress.countdownStartTime!)}
             </div>
             
             {/* Botones de navegación */}
@@ -1174,16 +1185,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       <h1 className="text-3xl font-bold text-center mt-6 mb-6 text-white">
         Sistema de Actividades Personalizadas
       </h1>
-      
-      {/* Botón temporal para limpiar temporizadores expirados */}
-      <div className="text-center mb-4">
-        <button
-          onClick={cleanupExpiredTimers}
-          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm"
-        >
-          🔄 Limpiar Temporizadores Expirados
-        </button>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 w-full">
         {Object.entries(results).map(([category, data]) => {
