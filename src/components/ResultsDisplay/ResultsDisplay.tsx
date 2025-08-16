@@ -537,15 +537,120 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     
     if (!currentProgress) return null;
 
+    // Obtener recomendaciones para navegación - optimizado con useMemo
+    const navigationData = useMemo(() => {
+      const allRecommendations = getRecommendationsForCategory(
+        categoryKey,
+        recommendationStatus[categoryKey]?.categoryLevel || "BAJO",
+        userTestAnswers!
+      );
+      const currentIndex = allRecommendations.findIndex(rec => rec.id === recommendation.id);
+      return {
+        allRecommendations,
+        currentIndex,
+        canGoPrev: currentIndex > 0,
+        canGoNext: currentIndex < allRecommendations.length - 1
+      };
+    }, [categoryKey, recommendation.id, recommendationStatus, userTestAnswers]);
+
+    // Función para encontrar la siguiente pregunta que necesita recomendación
+    const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
+      const allQuestions = categoryQuestions[categoryKey as keyof typeof categoryQuestions];
+      const userAnswers = userTestAnswers!;
+      
+      if (direction === 'next') {
+        // Buscar hacia adelante
+        for (let i = currentQuestionIndex + 1; i < allQuestions.length; i++) {
+          const questionNum = allQuestions[i];
+          const userAnswer = userAnswers[questionNum];
+          const correctAnswer = importedCorrectAnswers[questionNum];
+          
+          if (userAnswer !== correctAnswer) {
+            return i;
+          }
+        }
+      } else {
+        // Buscar hacia atrás
+        for (let i = currentQuestionIndex - 1; i >= 0; i--) {
+          const questionNum = allQuestions[i];
+          const userAnswer = userAnswers[questionNum];
+          const correctAnswer = importedCorrectAnswers[questionNum];
+          
+          if (userAnswer !== correctAnswer) {
+            return i;
+          }
+        }
+      }
+      
+      return null; // No hay más preguntas con recomendaciones
+    }, [categoryKey, userTestAnswers]);
+
+    // Handlers optimizados con useCallback
+    const handlePrevClick = useCallback(() => {
+      const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
+      const prevQuestionIndex = findNextQuestionWithRecommendation(currentQuestionIndex, 'prev');
+      
+      if (prevQuestionIndex !== null) {
+        setRecommendationStatus(prev => ({
+          ...prev,
+          [categoryKey]: {
+            ...prev[categoryKey],
+            currentQuestionIndex: prevQuestionIndex
+          }
+        }));
+      }
+    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+
+    const handleNextClick = useCallback(() => {
+      const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
+      const nextQuestionIndex = findNextQuestionWithRecommendation(currentQuestionIndex, 'next');
+      
+      if (nextQuestionIndex !== null) {
+        setRecommendationStatus(prev => ({
+          ...prev,
+          [categoryKey]: {
+            ...prev[categoryKey],
+            currentQuestionIndex: nextQuestionIndex
+          }
+        }));
+      }
+    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+
     if (currentProgress.isCompleted) {
       return (
         <div className="bg-green-50 p-6 rounded-lg border border-green-200">
           <h3 className="text-xl font-bold text-green-700 mb-2">
             ✅ {recommendation.title}
           </h3>
-          <p className="text-green-600">
+          <p className="text-green-600 mb-4">
             ¡Has completado todas las actividades de esta recomendación!
           </p>
+          
+          {/* Botones de navegación siempre visibles */}
+          <div className="flex justify-center gap-4">
+            <OptimizedButton
+              onClick={handlePrevClick}
+              disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') === null}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') !== null
+                  ? "bg-yellow-600 text-white hover:bg-yellow-700" 
+                  : "bg-gray-400 text-gray-200 cursor-not-allowed"
+              }`}
+            >
+              Anterior
+            </OptimizedButton>
+            <OptimizedButton
+              onClick={handleNextClick}
+              disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') === null}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') !== null
+                  ? "bg-green-600 text-white hover:bg-green-700" 
+                  : "bg-gray-400 text-gray-200 cursor-not-allowed"
+              }`}
+            >
+              Siguiente
+            </OptimizedButton>
+          </div>
         </div>
       );
     }
@@ -1169,31 +1274,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                       <span>{data.score}/6</span>
                     </div>
 
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center">
-                        <span>Progreso:</span>
-                        <span>
-                          {(() => {
-                            const progress = calculateRealProgress(category);
-                            if (progress.totalQuestionsWithRecommendations === 0) {
-                              return "Completado (todas las respuestas fueron correctas)";
-                            }
-                            return `Pregunta ${progress.completedQuestionsWithRecommendations + 1} de ${progress.totalQuestionsWithRecommendations}`;
-                          })()}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                          style={{
-                            width: `${(() => {
-                              const progress = calculateRealProgress(category);
-                              return progress.progressPercentage;
-                            })()}%`,
-                          }}
-                        ></div>
-                      </div>
-                    </div>
+                    
                   </div>
 
                   {(() => {
