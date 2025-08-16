@@ -5,7 +5,7 @@ import {
   RecommendationItem,
   FeedbackQuestion,
 } from "../../constants/recommendations";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc, getFirestore, updateDoc } from "firebase/firestore";
 import { questions as allTestQuestions } from "../../constants/questions";
@@ -35,16 +35,22 @@ const categoryQuestions = {
   fisico: [7, 9, 12, 18, 21, 28],
 };
 
+interface ActivityProgress {
+  currentDay: number;
+  currentActivityIndex: number;
+  completedActivities: number[];
+  isCompleted: boolean;
+  countdown?: number | null;
+  countdownStartTime?: number | null;
+}
+
 interface RecommendationStatus {
   [category: string]: {
     isOpen: boolean;
     userAnswers: Record<number, boolean>;
     categoryLevel: "ALTO" | "MEDIO" | "BAJO";
     recommendationProgress: {
-      [recommendationId: string]: {
-        currentActivityIndex: number;
-        isCompleted: boolean;
-      };
+      [recommendationId: string]: ActivityProgress;
     };
     currentQuestionIndex: number;
   };
@@ -76,6 +82,22 @@ const determineGeneralLevel = (
   return "BAJO";
 };
 
+// Función para formatear el tiempo restante
+const formatTimeRemaining = (seconds: number): string => {
+  if (seconds <= 0) return "Tiempo completado";
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `Falta ${hours} hora${hours > 1 ? 's' : ''}`;
+  } else if (minutes >= 10) {
+    return `Faltan ${minutes} minutos`;
+  } else {
+    return "Falta menos de 10 minutos";
+  }
+};
+
 export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const router = useRouter();
   const [results, setResults] = useState<Results | null>(null);
@@ -83,7 +105,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const [generalLevel, setGeneralLevel] = useState<
     "ALTO" | "MEDIO" | "BAJO" | null
   >(null);
-  const [currentDay] = useState(() => new Date().getDay());
   const [error, setError] = useState<string | null>(null);
   const [userTestAnswers, setUserTestAnswers] = useState<Record<
     number,
@@ -98,122 +119,422 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     Record<string, boolean>
   >({});
 
-  const RecommendationDisplay: React.FC<{
+  // Temporizadores activos
+  const activeTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Función para limpiar temporizadores expirados y actualizar el estado
+  const cleanupExpiredTimers = useCallback(() => {
+    setRecommendationStatus(prev => {
+      let hasChanges = false;
+      const updatedStatus = { ...prev };
+
+      Object.keys(updatedStatus).forEach(category => {
+        const categoryData = updatedStatus[category];
+        if (categoryData?.recommendationProgress) {
+          Object.keys(categoryData.recommendationProgress).forEach(recommendationId => {
+            const progress = categoryData.recommendationProgress[recommendationId];
+            if (progress?.countdown && progress?.countdownStartTime) {
+              const elapsed = Math.floor((Date.now() - progress.countdownStartTime) / 1000);
+              const remaining = Math.max(0, progress.countdown - elapsed);
+              
+              if (remaining <= 0) {
+                // El temporizador expiró, desbloquear el siguiente día
+                categoryData.recommendationProgress[recommendationId] = {
+                  ...progress,
+                  countdown: null,
+                  countdownStartTime: null,
+                  currentDay: progress.currentDay + 1,
+                  currentActivityIndex: 0
+                };
+                hasChanges = true;
+                
+                // Limpiar el temporizador activo si existe
+                const timerKey = `${category}-${recommendationId}`;
+                if (activeTimers.current.has(timerKey)) {
+                  clearInterval(activeTimers.current.get(timerKey)!);
+                  activeTimers.current.delete(timerKey);
+                }
+              }
+            }
+          });
+        }
+      });
+
+      return hasChanges ? updatedStatus : prev;
+    });
+  }, []);
+
+  // Limpiar temporizadores al desmontar y limpiar temporizadores expirados
+  useEffect(() => {
+    // Limpiar temporizadores expirados al montar el componente
+    cleanupExpiredTimers();
+    
+    // Limpiar temporizadores expirados cada 30 segundos
+    const cleanupInterval = setInterval(cleanupExpiredTimers, 30000);
+    
+    return () => {
+      activeTimers.current.forEach(timer => clearInterval(timer));
+      activeTimers.current.clear();
+      clearInterval(cleanupInterval);
+    };
+  }, [cleanupExpiredTimers]);
+
+  // Función para iniciar un temporizador - optimizada con useCallback
+  const startTimer = useCallback((category: string, recommendationId: string, duration: number = 300) => {
+    const timerKey = `${category}-${recommendationId}`;
+    
+    // Limpiar temporizador existente si lo hay
+    if (activeTimers.current.has(timerKey)) {
+      clearInterval(activeTimers.current.get(timerKey)!);
+    }
+
+    // Actualizar estado con el tiempo inicial
+    setRecommendationStatus(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        recommendationProgress: {
+          ...prev[category]?.recommendationProgress || {},
+          [recommendationId]: {
+            ...prev[category]?.recommendationProgress?.[recommendationId] || {},
+            countdown: duration,
+            countdownStartTime: Date.now()
+          }
+        }
+      }
+    }));
+
+    // Crear nuevo temporizador - optimizado para reducir re-renderizados
+    const timer = setInterval(() => {
+      setRecommendationStatus(prev => {
+        const currentProgress = prev[category]?.recommendationProgress[recommendationId];
+        if (!currentProgress || !currentProgress.countdown) {
+          clearInterval(timer);
+          activeTimers.current.delete(timerKey);
+          return prev;
+        }
+
+        // Calcular el tiempo real transcurrido desde el inicio del countdown
+        const elapsed = currentProgress.countdownStartTime 
+          ? Math.floor((Date.now() - currentProgress.countdownStartTime) / 1000)
+          : 0;
+        const actualRemaining = Math.max(0, duration - elapsed);
+        
+        if (actualRemaining <= 0) {
+          clearInterval(timer);
+          activeTimers.current.delete(timerKey);
+          
+          // Desbloquear el siguiente día
+          return {
+            ...prev,
+            [category]: {
+              ...prev[category],
+              recommendationProgress: {
+                ...prev[category]?.recommendationProgress || {},
+                [recommendationId]: {
+                  ...currentProgress,
+                  countdown: null,
+                  countdownStartTime: null,
+                  currentDay: currentProgress.currentDay + 1,
+                  currentActivityIndex: 0
+                }
+              }
+            }
+          };
+        }
+
+        return {
+          ...prev,
+          [category]: {
+            ...prev[category],
+            recommendationProgress: {
+              ...prev[category]?.recommendationProgress || {},
+              [recommendationId]: {
+                ...currentProgress,
+                countdown: actualRemaining
+              }
+            }
+          }
+        };
+      });
+    }, 5000); // Actualizar cada 5 segundos
+
+    activeTimers.current.set(timerKey, timer);
+  }, []);
+
+  // Función para completar una actividad - optimizada con useCallback
+  const completeActivity = useCallback(async (category: string, recommendationId: string) => {
+    const currentProgress = recommendationStatus[category]?.recommendationProgress?.[recommendationId];
+    if (!currentProgress) return;
+
+    const recommendation = getRecommendationsForCategory(
+      category,
+      recommendationStatus[category]?.categoryLevel || "BAJO",
+      userTestAnswers!
+    ).find(rec => rec.id === recommendationId);
+
+    if (!recommendation?.days) return;
+
+    const currentDay = recommendation.days[currentProgress.currentDay - 1];
+    if (!currentDay) return;
+
+    const nextActivityIndex = currentProgress.currentActivityIndex + 1;
+    const isLastActivityOfDay = nextActivityIndex >= currentDay.activities.length;
+    const isLastDay = currentProgress.currentDay >= recommendation.days.length;
+
+    if (isLastActivityOfDay) {
+      if (isLastDay) {
+        // Completar toda la recomendación
+        setRecommendationStatus(prev => ({
+          ...prev,
+          [category]: {
+            ...prev[category],
+            recommendationProgress: {
+              ...prev[category]?.recommendationProgress || {},
+              [recommendationId]: {
+                ...currentProgress,
+                isCompleted: true,
+                countdown: null,
+                countdownStartTime: null
+              }
+            }
+          }
+        }));
+
+        // Mostrar feedback si existe
+        if (recommendation.feedbackQuestions?.length) {
+          setCurrentFeedbackRec(recommendation);
+          setFeedbackAnswers({});
+          setShowFeedbackModal(true);
+        }
+      } else {
+        // Iniciar temporizador para el siguiente día
+        startTimer(category, recommendationId, 300); // 5 minutos
+      }
+    } else {
+      // Avanzar a la siguiente actividad del mismo día
+      setRecommendationStatus(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category],
+          recommendationProgress: {
+            ...prev[category]?.recommendationProgress || {},
+            [recommendationId]: {
+              ...currentProgress,
+              currentActivityIndex: nextActivityIndex
+            }
+          }
+        }
+      }));
+    }
+
+    // Guardar en Firebase
+    try {
+      const db = getFirestore();
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        [`recommendationProgress.${category}.recommendationProgress.${recommendationId}`]: {
+          currentDay: currentProgress.currentDay,
+          currentActivityIndex: isLastActivityOfDay ? 0 : nextActivityIndex,
+          completedActivities: [...(currentProgress.completedActivities || []), currentProgress.currentActivityIndex],
+          isCompleted: isLastDay,
+          countdown: isLastActivityOfDay && !isLastDay ? 300 : null,
+          countdownStartTime: isLastActivityOfDay && !isLastDay ? Date.now() : null
+        }
+      });
+    } catch (error) {
+      console.error("Error saving activity progress:", error);
+    }
+  }, [recommendationStatus, userTestAnswers, startTimer, userId]);
+
+  // Componente para mostrar actividades de un día - optimizado con useMemo
+  const DayActivitiesRenderer: React.FC<{
     recommendation: RecommendationItem;
     categoryKey: string;
-    onMarkActivityComplete: (
-      category: string,
-      recommendationId: string,
-      activityIndex: number
-    ) => void;
-    currentRecommendationProgress: {
-      currentActivityIndex: number;
-      isCompleted: boolean;
-    };
-  }> = ({
-    recommendation,
-    categoryKey,
-    onMarkActivityComplete,
-    currentRecommendationProgress,
-  }) => {
-    // Manejar casos donde activities no está definido
-    const hasActivities =
-      recommendation.activities && recommendation.activities.length > 0;
-    const currentActivity = hasActivities
-      ? recommendation.activities![
-          currentRecommendationProgress.currentActivityIndex
-        ]
-      : null;
-    const isLastActivity = hasActivities
-      ? currentRecommendationProgress.currentActivityIndex ===
-        recommendation.activities!.length - 1
-      : true;
-    const isRecommendationCompleted =
-      currentRecommendationProgress.isCompleted || !hasActivities;
+    currentProgress: ActivityProgress;
+  }> = ({ recommendation, categoryKey, currentProgress }) => {
+    const currentDay = recommendation.days?.[currentProgress.currentDay - 1];
+    if (!currentDay) return null;
 
-    const handleNextActivity = () => {
-      onMarkActivityComplete(
+    const currentActivity = currentDay.activities[currentProgress.currentActivityIndex];
+    const isLastActivityOfDay = currentProgress.currentActivityIndex === currentDay.activities.length - 1;
+    const isLastDay = recommendation.days ? currentProgress.currentDay === recommendation.days.length : false;
+    const hasCountdown = currentProgress.countdown !== null && currentProgress.countdown !== undefined;
+
+    // Obtener recomendaciones para navegación - optimizado con useMemo
+    const navigationData = useMemo(() => {
+      const allRecommendations = getRecommendationsForCategory(
         categoryKey,
-        recommendation.id,
-        currentRecommendationProgress.currentActivityIndex
+        recommendationStatus[categoryKey]?.categoryLevel || "BAJO",
+        userTestAnswers!
       );
-    };
+      const currentIndex = allRecommendations.findIndex(rec => rec.id === recommendation.id);
+      return {
+        allRecommendations,
+        currentIndex,
+        canGoPrev: currentIndex > 0,
+        canGoNext: currentIndex < allRecommendations.length - 1
+      };
+    }, [categoryKey, recommendation.id, recommendationStatus, userTestAnswers]);
 
-    const handleResetRecommendation = () => {
-      onMarkActivityComplete(categoryKey, recommendation.id, -1);
-    };
+    // Handlers optimizados con useCallback
+    const handlePrevClick = useCallback(() => {
+      if (navigationData.canGoPrev) {
+        setRecommendationStatus(prev => ({
+          ...prev,
+          [categoryKey]: {
+            ...prev[categoryKey],
+            currentQuestionIndex: navigationData.currentIndex - 1
+          }
+        }));
+      }
+    }, [categoryKey, navigationData.canGoPrev, navigationData.currentIndex]);
+
+    const handleNextClick = useCallback(() => {
+      if (navigationData.canGoNext) {
+        setRecommendationStatus(prev => ({
+          ...prev,
+          [categoryKey]: {
+            ...prev[categoryKey],
+            currentQuestionIndex: navigationData.currentIndex + 1
+          }
+        }));
+      }
+    }, [categoryKey, navigationData.canGoNext, navigationData.currentIndex]);
+
+    const handleCompleteActivity = useCallback(() => {
+      completeActivity(categoryKey, recommendation.id);
+    }, [completeActivity, categoryKey, recommendation.id]);
+
+    if (hasCountdown) {
+      return (
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-green-700 mb-4">
+              ¡Felicidades!
+            </h3>
+            <p className="text-lg mb-4">
+              Has completado todas las actividades del Día {currentProgress.currentDay}.
+            </p>
+            <p className="text-lg mb-6">
+              Las actividades del Día {currentProgress.currentDay + 1} estarán disponibles en:
+            </p>
+            <div className="text-3xl font-bold text-blue-700 mb-6">
+              {formatTimeRemaining(currentProgress.countdown!)}
+            </div>
+            
+            {/* Botones de navegación */}
+            <div className="flex justify-center gap-4">
+              <OptimizedButton
+                onClick={handlePrevClick}
+                disabled={!navigationData.canGoPrev}
+                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  navigationData.canGoPrev 
+                    ? "bg-yellow-600 text-white hover:bg-yellow-700" 
+                    : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                }`}
+              >
+                Anterior
+              </OptimizedButton>
+              <OptimizedButton
+                onClick={handleNextClick}
+                disabled={!navigationData.canGoNext}
+                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  navigationData.canGoNext 
+                    ? "bg-green-600 text-white hover:bg-green-700" 
+                    : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                }`}
+              >
+                Siguiente
+              </OptimizedButton>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div
-        className={`recommendation-card ${
-          isRecommendationCompleted ? "completed-rec" : ""
-        }`}
-      >
-        <h3 className="font-semibold text-lg mb-2">{recommendation.title}</h3>
-        {recommendation.questionAsked && (
-          <p className="text-sm text-gray-700 mb-2">
-            Pregunta: &quot;{recommendation.questionAsked}&quot; - Tu respuesta:{" "}
-            {recommendation.questionAnsweredIncorrectly ? "NO" : "SÍ"}
-          </p>
-        )}
-
-        <p className="mb-3 text-gray-700">{recommendation.description}</p>
-
-        {!isRecommendationCompleted && hasActivities ? (
-          <>
-            <h4 className="font-medium text-md mb-2">Actividad Actual:</h4>
-            <div className="bg-blue-50 p-3 rounded-md mb-4 border border-blue-200">
-              <p dangerouslySetInnerHTML={{ __html: currentActivity! }}></p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleNextActivity}
-                className="px-4 py-2 rounded-md text-white font-medium transition-colors bg-green-600 hover:bg-green-700"
-              >
-                {isLastActivity
-                  ? "Culminar Recomendación"
-                  : "Marcar Actividad Completada"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-green-700 font-semibold mb-3">
-              {hasActivities ? "¡Recomendación Completada!" : "Recomendación"}
-            </p>
-
-            {hasActivities && (
-              <button
-                onClick={handleResetRecommendation}
-                className="px-4 py-2 rounded-md bg-gray-500 text-white font-medium hover:bg-gray-600 transition-colors"
-              >
-                Reiniciar Recomendación
-              </button>
-            )}
-
-            {recommendation.feedbackQuestions &&
-              recommendation.feedbackQuestions.length > 0 && (
-                <button
-                  onClick={() => {
-                    setCurrentFeedbackRec(recommendation);
-                    setFeedbackAnswers({});
-                    setShowFeedbackModal(true);
-                  }}
-                  className={`px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors ${
-                    hasActivities ? "ml-2" : ""
-                  }`}
-                >
-                  Ver Retroalimentación
-                </button>
-              )}
+      <div className="bg-white p-6 rounded-lg border border-gray-200">
+        <h3 className="text-xl font-bold mb-4">Día {currentProgress.currentDay}</h3>
+        
+        {currentActivity && (
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold mb-2">{currentActivity.title}</h4>
+            <p className="text-gray-700 mb-4">{currentActivity.description}</p>
+            
+            <OptimizedButton
+              onClick={handleCompleteActivity}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+              {isLastActivityOfDay ? "Culminar Día" : "Marcar Actividad Completada"}
+            </OptimizedButton>
           </div>
         )}
+
+        {/* Progreso del día */}
+        <div className="mb-4">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <span>Progreso del día:</span>
+            <span>{currentProgress.currentActivityIndex + 1} de {currentDay.activities.length}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{
+                width: `${((currentProgress.currentActivityIndex + 1) / currentDay.activities.length) * 100}%`
+              }}
+            />
+          </div>
+        </div>
       </div>
     );
   };
 
-  const saveResultsToFirebase = async (
+  // Componente para mostrar una recomendación - optimizado con memo
+  const RecommendationDisplay = memo<{
+    recommendation: RecommendationItem;
+    categoryKey: string;
+  }>(({ recommendation, categoryKey }) => {
+    const currentProgress = recommendationStatus[categoryKey]?.recommendationProgress?.[recommendation.id];
+    
+    if (!currentProgress) return null;
+
+    if (currentProgress.isCompleted) {
+      return (
+        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+          <h3 className="text-xl font-bold text-green-700 mb-2">
+            ✅ {recommendation.title}
+          </h3>
+          <p className="text-green-600">
+            ¡Has completado todas las actividades de esta recomendación!
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
+        <h3 className="text-xl font-bold mb-2">{recommendation.title}</h3>
+        {recommendation.questionAsked && (
+          <p className="text-sm text-gray-600 mb-2">
+            Pregunta: "{recommendation.questionAsked}" - Tu respuesta: {recommendation.questionAnsweredIncorrectly ? "NO" : "SÍ"}
+          </p>
+        )}
+        <p className="text-gray-700 mb-4">{recommendation.description}</p>
+        
+        {recommendation.days && (
+          <DayActivitiesRenderer
+            recommendation={recommendation}
+            categoryKey={categoryKey}
+            currentProgress={currentProgress}
+          />
+        )}
+      </div>
+    );
+  });
+
+  // Funciones optimizadas con useCallback
+  const saveResultsToFirebase = useCallback(async (
     resultsData: Results,
     answers: Record<number, boolean>
   ) => {
@@ -250,203 +571,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         "Hubo un error al guardar tus resultados. Por favor, inténtalo de nuevo."
       );
     }
-  };
+  }, [userId]);
 
-  const moveToNextQuestion = async (category: string) => {
-    setRecommendationStatus((prevStatus) => {
-      const newStatus = { ...prevStatus };
-      const currentCategoryStatus = { ...newStatus[category] };
-
-      currentCategoryStatus.currentQuestionIndex += 1;
-
-      newStatus[category] = currentCategoryStatus;
-      return newStatus;
-    });
-
-    try {
-      const db = getFirestore();
-      const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, {
-        [`recommendationProgress.${category}.currentQuestionIndex`]:
-          recommendationStatus[category].currentQuestionIndex + 1,
-      });
-    } catch (error) {
-      console.error("Error saving question progress:", error);
-    }
-  };
-
-  const handleOnMarkActivityComplete = async (
-    category: string,
-    recommendationId: string,
-    activityIndex: number
-  ) => {
-    const prevQuestionIndex =
-      recommendationStatus[category]?.currentQuestionIndex ?? 0;
-
-    setRecommendationStatus((prevStatus) => {
-      const newStatus = { ...prevStatus };
-      const currentCategoryStatus = { ...newStatus[category] };
-      const recProgress = {
-        ...currentCategoryStatus.recommendationProgress[recommendationId],
-      };
-
-      if (activityIndex === -1) {
-        // Reiniciar recomendación
-        recProgress.currentActivityIndex = 0;
-        recProgress.isCompleted = false;
-      } else {
-        const recsForCategory = getRecommendationsForCategory(
-          category,
-          currentCategoryStatus.categoryLevel,
-          userTestAnswers!
-        );
-        const currentRec = recsForCategory.find(
-          (r) => r.id === recommendationId
-        );
-
-        if (currentRec) {
-          const hasActivities =
-            currentRec.activities && currentRec.activities.length > 0;
-
-          if (hasActivities) {
-            // CLAVE: Incrementar DESPUÉS de completar la actividad actual
-            const nextActivityIndex = activityIndex + 1;
-
-            // Si aún hay más actividades que mostrar
-            if (nextActivityIndex < currentRec.activities!.length) {
-              recProgress.currentActivityIndex = nextActivityIndex;
-            } else {
-              // Si completó todas las actividades
-              recProgress.isCompleted = true;
-
-              // Mostrar feedback solo si hay preguntas de feedback
-              if (
-                currentRec.feedbackQuestions &&
-                currentRec.feedbackQuestions.length > 0
-              ) {
-                setTimeout(() => {
-                  setCurrentFeedbackRec(currentRec);
-                  setFeedbackAnswers({});
-                  setShowFeedbackModal(true);
-                }, 500);
-              }
-            }
-          } else {
-            recProgress.isCompleted = true;
-          }
-        }
-      }
-
-      currentCategoryStatus.recommendationProgress[recommendationId] =
-        recProgress;
-      newStatus[category] = currentCategoryStatus;
-
-      // Verificar si todas las recomendaciones de la pregunta actual están completas
-      const currentQuestionNum =
-        categoryQuestions[category as keyof typeof categoryQuestions][
-          currentCategoryStatus.currentQuestionIndex
-        ];
-      const recsForCategory = getRecommendationsForCategory(
-        category,
-        currentCategoryStatus.categoryLevel,
-        userTestAnswers!
-      );
-      const allRecsForQuestion = recsForCategory.filter(
-        (r) => r.relatedQuestion === currentQuestionNum
-      );
-
-      const allCompleted = allRecsForQuestion.every((r) => {
-        const updatedRecProgress =
-          newStatus[category].recommendationProgress[r.id];
-        return (
-          updatedRecProgress?.isCompleted ||
-          !(r.activities && r.activities.length > 0)
-        );
-      });
-
-      // Solo avanzar a la siguiente pregunta si TODAS las recomendaciones están completas
-      if (allCompleted && recProgress.isCompleted) {
-        currentCategoryStatus.currentQuestionIndex += 1;
-      }
-
-      return newStatus;
-    });
-
-    // Guardar en Firebase (simplificado)
-    try {
-      const db = getFirestore();
-      const userRef = doc(db, "users", userId);
-
-      // Obtener el estado actual después de la actualización
-      const currentRecProgress =
-        recommendationStatus[category]?.recommendationProgress[
-          recommendationId
-        ];
-      if (currentRecProgress) {
-        const newIndex = activityIndex === -1 ? 0 : activityIndex + 1;
-        const recsForCategory = getRecommendationsForCategory(
-          category,
-          recommendationStatus[category].categoryLevel,
-          userTestAnswers!
-        );
-        const currentRec = recsForCategory.find(
-          (r) => r.id === recommendationId
-        );
-        const totalActivities = currentRec?.activities?.length || 0;
-        const isCompleted =
-          activityIndex === -1 ? false : newIndex >= totalActivities;
-
-        const updateData: any = {
-          [`recommendationProgress.${category}.recommendationProgress.${recommendationId}`]:
-            {
-              currentActivityIndex: isCompleted ? totalActivities : newIndex,
-              isCompleted,
-            },
-        };
-        if (isCompleted) {
-          updateData[
-            `recommendationProgress.${category}.currentQuestionIndex`
-          ] = prevQuestionIndex + 1;
-        }
-        await updateDoc(userRef, updateData);
-      }
-    } catch (error) {
-      console.error("Error saving recommendation activity progress:", error);
-    }
-  };
-
-  const handleFeedbackSubmit = (questionKey: string, answer: boolean) => {
-    setFeedbackAnswers((prev) => ({ ...prev, [questionKey]: answer }));
-  };
-
-  const submitAllFeedback = async () => {
-    if (!currentFeedbackRec || !currentFeedbackRec.feedbackQuestions) return;
-
-    const allAnswered = currentFeedbackRec.feedbackQuestions.every((q) =>
-      feedbackAnswers.hasOwnProperty(q.key)
-    );
-
-    if (allAnswered) {
-      try {
-        const db = getFirestore();
-        const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, {
-          [`activityFeedback.${currentFeedbackRec.id}`]: feedbackAnswers,
-        });
-      } catch (error) {
-        console.error("Error saving activity feedback:", error);
-      }
-      setShowFeedbackModal(false);
-      setCurrentFeedbackRec(null);
-      setFeedbackAnswers({});
-    } else {
-      alert(
-        "Por favor, responde a todas las preguntas de retroalimentación antes de continuar."
-      );
-    }
-  };
-
-  const getRecommendationsForCategory = (
+  const getRecommendationsForCategory = useCallback((
     category: string,
     level: "ALTO" | "MEDIO" | "BAJO",
     answers: Record<number, boolean>
@@ -487,14 +614,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         allRecommendations[category as keyof typeof allRecommendations][
           "BAJO"
         ] as RecommendationItem[]
-      ).filter((rec) => !rec.relatedQuestion); // Solo las que NO tienen pregunta relacionada
+      ).filter((rec) => !rec.relatedQuestion);
       return generalRecs;
     }
 
     return questionBasedRecs;
-  };
+  }, []);
 
-  const toggleSection = (category: string) => {
+  const toggleSection = useCallback((category: string) => {
     setRecommendationStatus((prevStatus) => ({
       ...prevStatus,
       [category]: {
@@ -502,7 +629,38 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         isOpen: !prevStatus[category].isOpen,
       },
     }));
-  };
+  }, []);
+
+  const handleFeedbackSubmit = useCallback((questionKey: string, answer: boolean) => {
+    setFeedbackAnswers((prev) => ({ ...prev, [questionKey]: answer }));
+  }, []);
+
+  const submitAllFeedback = useCallback(async () => {
+    if (!currentFeedbackRec || !currentFeedbackRec.feedbackQuestions) return;
+
+    const allAnswered = currentFeedbackRec.feedbackQuestions.every((q) =>
+      feedbackAnswers.hasOwnProperty(q.key)
+    );
+
+    if (allAnswered) {
+      try {
+        const db = getFirestore();
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          [`activityFeedback.${currentFeedbackRec.id}`]: feedbackAnswers,
+        });
+      } catch (error) {
+        console.error("Error saving activity feedback:", error);
+      }
+      setShowFeedbackModal(false);
+      setCurrentFeedbackRec(null);
+      setFeedbackAnswers({});
+    } else {
+      alert(
+        "Por favor, responde a todas las preguntas de retroalimentación antes de continuar."
+      );
+    }
+  }, [currentFeedbackRec, feedbackAnswers, userId]);
 
   useEffect(() => {
     const db = getFirestore();
@@ -572,10 +730,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           );
 
           const categoryRecProgress: {
-            [id: string]: {
-              currentActivityIndex: number;
-              isCompleted: boolean;
-            };
+            [id: string]: ActivityProgress;
           } = {};
           recs.forEach((rec) => {
             const savedRecData =
@@ -583,9 +738,34 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 rec.id
               ];
             categoryRecProgress[rec.id] = {
+              currentDay: savedRecData?.currentDay ?? 1,
               currentActivityIndex: savedRecData?.currentActivityIndex ?? 0,
+              completedActivities: savedRecData?.completedActivities ?? [],
               isCompleted: savedRecData?.isCompleted ?? false,
+              countdown: savedRecData?.countdown ?? null,
+              countdownStartTime: savedRecData?.countdownStartTime ?? null
             };
+
+            // Reiniciar temporizadores si hay countdown activo
+            if (savedRecData?.countdown && savedRecData.countdown > 0) {
+              const elapsed = savedRecData.countdownStartTime 
+                ? Math.floor((Date.now() - savedRecData.countdownStartTime) / 1000)
+                : 0;
+              const remaining = Math.max(0, savedRecData.countdown - elapsed);
+              
+              if (remaining > 0) {
+                startTimer(category, rec.id, remaining);
+              } else {
+                // Si el tiempo ya expiró, desbloquear el siguiente día inmediatamente
+                categoryRecProgress[rec.id] = {
+                  ...categoryRecProgress[rec.id],
+                  countdown: null,
+                  countdownStartTime: null,
+                  currentDay: (savedRecData.currentDay || 1) + 1,
+                  currentActivityIndex: 0
+                };
+              }
+            }
           });
 
           initialRecommendationStatus[category] = {
@@ -608,15 +788,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     };
 
     fetchAndProcessResults();
-  }, [userId]);
+  }, [userId, saveResultsToFirebase, startTimer, getRecommendationsForCategory]);
 
-  const getLevelClass = (level: string): string => {
+  // Funciones optimizadas con useCallback y useMemo
+  const getLevelClass = useCallback((level: string): string => {
     if (level === "ALTO") return "bg-green-100 text-green-800";
     if (level === "MEDIO") return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
-  };
+  }, []);
 
-  const getLevelColor = (level: "ALTO" | "MEDIO" | "BAJO"): string => {
+  const getLevelColor = useCallback((level: "ALTO" | "MEDIO" | "BAJO"): string => {
     switch (level) {
       case "ALTO":
         return "text-green-500";
@@ -627,20 +808,22 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       default:
         return "";
     }
-  };
-  // Detect when all categories are completed to show reset button
-  const allCategoriesCompleted = Boolean(
+  }, []);
+
+  const allCategoriesCompleted = useMemo(() => Boolean(
     results &&
+      recommendationStatus &&
       Object.entries(results).every(([category, data]) => {
         if (data.level !== "BAJO") return true;
         const allQs =
           categoryQuestions[category as keyof typeof categoryQuestions];
         return (
-          recommendationStatus[category]?.currentQuestionIndex >= allQs.length
+          ((recommendationStatus[category]?.currentQuestionIndex ?? 0) >= allQs.length)
         );
       })
-  );
-  const handleResetTest = async () => {
+  ), [results, recommendationStatus]);
+
+  const handleResetTest = useCallback(async () => {
     try {
       localStorage.removeItem("testAnswers");
       const db = getFirestore();
@@ -658,7 +841,37 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       console.error("Error resetting test:", error);
       router.push("/test");
     }
-  };
+  }, [userId, router]);
+
+  const handleContinueToNextQuestion = useCallback((category: string) => {
+    setRecommendationStatus(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        currentQuestionIndex: (prev[category]?.currentQuestionIndex || 0) + 1
+      }
+    }));
+  }, []);
+
+  const handleCloseFeedbackModal = useCallback(() => {
+    setShowFeedbackModal(false);
+  }, []);
+
+  // Componente de botón optimizado para evitar re-renderizados
+  const OptimizedButton = memo<{
+    onClick: () => void;
+    disabled?: boolean;
+    className: string;
+    children: React.ReactNode;
+  }>(({ onClick, disabled = false, className, children }) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+    >
+      {children}
+    </button>
+  ));
 
   if (error) {
     return (
@@ -704,28 +917,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 </p>
               </div>
               <div className="mt-4">
-                <button
-                  onClick={async () => {
-                    try {
-                      localStorage.removeItem("testAnswers");
-                      const db = getFirestore();
-                      const userRef = doc(db, "users", userId);
-                      await updateDoc(userRef, {
-                        answers: {},
-                        testDuration: 0,
-                        veracityScore: 0,
-                        lastTestDate: null,
-                      });
-                      router.push("/dashboard/user");
-                    } catch (error) {
-                      console.error("Error al reiniciar el test:", error);
-                      router.push("/dashboard/user");
-                    }
-                  }}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
-                >
-                  Realizar Test Nuevamente
-                </button>
+                                  <button
+                    onClick={handleResetTest}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    Realizar Test Nuevamente
+                  </button>
               </div>
             </div>
           </div>
@@ -737,6 +934,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   if (
     !results ||
     !userTestAnswers ||
+    !recommendationStatus ||
     Object.keys(recommendationStatus).length === 0
   ) {
     return (
@@ -769,12 +967,22 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       />
 
       <h1 className="text-3xl font-bold text-center mt-6 mb-6 text-white">
-        Recomendaciones Personalizadas
+        Sistema de Actividades Personalizadas
       </h1>
+      
+      {/* Botón temporal para limpiar temporizadores expirados */}
+      <div className="text-center mb-4">
+        <button
+          onClick={cleanupExpiredTimers}
+          className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm"
+        >
+          🔄 Limpiar Temporizadores Expirados
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 w-full">
         {Object.entries(results).map(([category, data]) => {
-          const status = recommendationStatus[category];
+          const status = recommendationStatus?.[category];
           const recommendationsForCategory = getRecommendationsForCategory(
             category,
             data.level,
@@ -819,22 +1027,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           }
 
           // Para nivel BAJO, mostramos el sistema completo de actividades
-          const currentQuestionNum =
-            categoryQuestions[category as keyof typeof categoryQuestions][
-              status.currentQuestionIndex
-            ];
           const currentRecommendations = recommendationsForCategory.filter(
-            (rec) =>
-              rec.relatedQuestion === currentQuestionNum || !rec.relatedQuestion
+            (rec) => {
+              const questionNum = categoryQuestions[category as keyof typeof categoryQuestions][status?.currentQuestionIndex || 0];
+              return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
+            }
           );
 
-          const allQuestions =
-            categoryQuestions[category as keyof typeof categoryQuestions];
-          const isLastQuestion =
-            status.currentQuestionIndex >= allQuestions.length - 1;
-          const allRecommendationsCompleted = currentRecommendations.every(
-            (rec) => status.recommendationProgress[rec.id]?.isCompleted
-          );
+          const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
+          const isLastQuestion = status.currentQuestionIndex >= allQuestions.length - 1;
+
           return (
             <div
               key={category}
@@ -873,7 +1075,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                         <span>
                           Pregunta{" "}
                           {Math.min(
-                            status.currentQuestionIndex + 1,
+                            (status?.currentQuestionIndex || 0) + 1,
                             allQuestions.length
                           )}{" "}
                           de {allQuestions.length}
@@ -884,7 +1086,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                           className="bg-blue-600 h-2.5 rounded-full"
                           style={{
                             width: `${
-                              (status.currentQuestionIndex /
+                              ((status?.currentQuestionIndex || 0) /
                                 allQuestions.length) *
                               100
                             }%`,
@@ -894,25 +1096,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                     </div>
                   </div>
 
-                  {status.currentQuestionIndex < allQuestions.length ? (
+                  {(status?.currentQuestionIndex || 0) < allQuestions.length ? (
                     <>
                       {currentRecommendations.length > 0 ? (
-                        currentRecommendations.map(
-                          (rec) =>
-                            status.recommendationProgress[rec.id] && (
-                              <RecommendationDisplay
-                                key={rec.id}
-                                recommendation={rec}
-                                categoryKey={category}
-                                onMarkActivityComplete={
-                                  handleOnMarkActivityComplete
-                                }
-                                currentRecommendationProgress={
-                                  status.recommendationProgress[rec.id]
-                                }
-                              />
-                            )
-                        )
+                        currentRecommendations.map((rec) => (
+                          <RecommendationDisplay
+                            key={rec.id}
+                            recommendation={rec}
+                            categoryKey={category}
+                          />
+                        ))
                       ) : (
                         <div className="mb-4 p-4 bg-green-100 border border-green-200 rounded-md">
                           <p>
@@ -920,7 +1113,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                             pregunta. Tu respuesta fue adecuada.
                           </p>
                           <button
-                            onClick={() => moveToNextQuestion(category)}
+                            onClick={() => handleContinueToNextQuestion(category)}
                             className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                           >
                             Continuar a la siguiente pregunta
@@ -953,6 +1146,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           </button>
         </div>
       )}
+
       {showFeedbackModal && currentFeedbackRec && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
@@ -990,7 +1184,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             ))}
             <div className="flex justify-end space-x-4 mt-6">
               <button
-                onClick={() => setShowFeedbackModal(false)}
+                onClick={handleCloseFeedbackModal}
                 className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
               >
                 Cerrar
