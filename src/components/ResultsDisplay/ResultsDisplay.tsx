@@ -1204,7 +1204,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 key={category}
                 className="bg-celeste p-6 rounded-lg shadow-lg w-full"
               >
-                <h2 className="text-xl capitalize mb-4">Aspecto {category}</h2>
+                <h2 className="text-xl capitalize mb-4">Dominio {category}</h2>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Nivel:</span>
@@ -1252,7 +1252,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 onClick={() => toggleSection(category)}
                 className="w-full flex justify-between items-center text-left py-2 px-4 rounded-md bg-mi-color-rgb text-white font-semibold mb-4"
               >
-                <h2 className="text-xl capitalize">Aspecto {category}</h2>
+                <h2 className="text-xl capitalize">Dominio {category}</h2>
                 <span className="text-2xl">{status.isOpen ? "−" : "+"}</span>
               </button>
 
