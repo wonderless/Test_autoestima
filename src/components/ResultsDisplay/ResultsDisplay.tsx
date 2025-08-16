@@ -377,30 +377,68 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       };
     }, [categoryKey, recommendation.id, recommendationStatus, userTestAnswers]);
 
+    // Función para encontrar la siguiente pregunta que necesita recomendación
+    const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
+      const allQuestions = categoryQuestions[categoryKey as keyof typeof categoryQuestions];
+      const userAnswers = userTestAnswers!;
+      
+      if (direction === 'next') {
+        // Buscar hacia adelante
+        for (let i = currentQuestionIndex + 1; i < allQuestions.length; i++) {
+          const questionNum = allQuestions[i];
+          const userAnswer = userAnswers[questionNum];
+          const correctAnswer = importedCorrectAnswers[questionNum];
+          
+          if (userAnswer !== correctAnswer) {
+            return i;
+          }
+        }
+      } else {
+        // Buscar hacia atrás
+        for (let i = currentQuestionIndex - 1; i >= 0; i--) {
+          const questionNum = allQuestions[i];
+          const userAnswer = userAnswers[questionNum];
+          const correctAnswer = importedCorrectAnswers[questionNum];
+          
+          if (userAnswer !== correctAnswer) {
+            return i;
+          }
+        }
+      }
+      
+      return null; // No hay más preguntas con recomendaciones
+    }, [categoryKey, userTestAnswers]);
+
     // Handlers optimizados con useCallback
     const handlePrevClick = useCallback(() => {
-      if (navigationData.canGoPrev) {
+      const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
+      const prevQuestionIndex = findNextQuestionWithRecommendation(currentQuestionIndex, 'prev');
+      
+      if (prevQuestionIndex !== null) {
         setRecommendationStatus(prev => ({
           ...prev,
           [categoryKey]: {
             ...prev[categoryKey],
-            currentQuestionIndex: navigationData.currentIndex - 1
+            currentQuestionIndex: prevQuestionIndex
           }
         }));
       }
-    }, [categoryKey, navigationData.canGoPrev, navigationData.currentIndex]);
+    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
 
     const handleNextClick = useCallback(() => {
-      if (navigationData.canGoNext) {
+      const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
+      const nextQuestionIndex = findNextQuestionWithRecommendation(currentQuestionIndex, 'next');
+      
+      if (nextQuestionIndex !== null) {
         setRecommendationStatus(prev => ({
           ...prev,
           [categoryKey]: {
             ...prev[categoryKey],
-            currentQuestionIndex: navigationData.currentIndex + 1
+            currentQuestionIndex: nextQuestionIndex
           }
         }));
       }
-    }, [categoryKey, navigationData.canGoNext, navigationData.currentIndex]);
+    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
 
     const handleCompleteActivity = useCallback(() => {
       completeActivity(categoryKey, recommendation.id);
@@ -427,9 +465,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             <div className="flex justify-center gap-4">
               <OptimizedButton
                 onClick={handlePrevClick}
-                disabled={!navigationData.canGoPrev}
+                disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') === null}
                 className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  navigationData.canGoPrev 
+                  findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') !== null
                     ? "bg-yellow-600 text-white hover:bg-yellow-700" 
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
                 }`}
@@ -438,9 +476,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               </OptimizedButton>
               <OptimizedButton
                 onClick={handleNextClick}
-                disabled={!navigationData.canGoNext}
+                disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') === null}
                 className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                  navigationData.canGoNext 
+                  findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') !== null
                     ? "bg-green-600 text-white hover:bg-green-700" 
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
                 }`}
@@ -810,18 +848,50 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     }
   }, []);
 
+  // Función para calcular el progreso real basado en preguntas que necesitan recomendaciones
+  const calculateRealProgress = useCallback((category: string) => {
+    const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
+    const userAnswers = userTestAnswers!;
+    const currentQuestionIndex = recommendationStatus[category]?.currentQuestionIndex || 0;
+    
+    // Contar cuántas preguntas necesitan recomendaciones
+    let totalQuestionsWithRecommendations = 0;
+    let completedQuestionsWithRecommendations = 0;
+    
+    for (let i = 0; i < allQuestions.length; i++) {
+      const questionNum = allQuestions[i];
+      const userAnswer = userAnswers[questionNum];
+      const correctAnswer = importedCorrectAnswers[questionNum];
+      
+      if (userAnswer !== correctAnswer) {
+        totalQuestionsWithRecommendations++;
+        if (i < currentQuestionIndex) {
+          completedQuestionsWithRecommendations++;
+        }
+      }
+    }
+    
+    return {
+      totalQuestionsWithRecommendations,
+      completedQuestionsWithRecommendations,
+      currentQuestionIndex,
+      progressPercentage: totalQuestionsWithRecommendations > 0 
+        ? (completedQuestionsWithRecommendations / totalQuestionsWithRecommendations) * 100 
+        : 100
+    };
+  }, [userTestAnswers, recommendationStatus]);
+
   const allCategoriesCompleted = useMemo(() => Boolean(
     results &&
       recommendationStatus &&
+      userTestAnswers &&
       Object.entries(results).every(([category, data]) => {
         if (data.level !== "BAJO") return true;
-        const allQs =
-          categoryQuestions[category as keyof typeof categoryQuestions];
-        return (
-          ((recommendationStatus[category]?.currentQuestionIndex ?? 0) >= allQs.length)
-        );
+        
+        const progress = calculateRealProgress(category);
+        return progress.completedQuestionsWithRecommendations >= progress.totalQuestionsWithRecommendations;
       })
-  ), [results, recommendationStatus]);
+  ), [results, recommendationStatus, userTestAnswers, calculateRealProgress]);
 
   const handleResetTest = useCallback(async () => {
     try {
@@ -844,14 +914,44 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, [userId, router]);
 
   const handleContinueToNextQuestion = useCallback((category: string) => {
-    setRecommendationStatus(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        currentQuestionIndex: (prev[category]?.currentQuestionIndex || 0) + 1
+    const currentQuestionIndex = recommendationStatus[category]?.currentQuestionIndex || 0;
+    const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
+    const userAnswers = userTestAnswers!;
+    
+    // Buscar la siguiente pregunta que necesita recomendación
+    let nextQuestionIndex = currentQuestionIndex + 1;
+    while (nextQuestionIndex < allQuestions.length) {
+      const questionNum = allQuestions[nextQuestionIndex];
+      const userAnswer = userAnswers[questionNum];
+      const correctAnswer = importedCorrectAnswers[questionNum];
+      
+      if (userAnswer !== correctAnswer) {
+        // Encontramos una pregunta que necesita recomendación
+        break;
       }
-    }));
-  }, []);
+      nextQuestionIndex++;
+    }
+    
+    // Si encontramos una pregunta válida, navegar a ella
+    if (nextQuestionIndex < allQuestions.length) {
+      setRecommendationStatus(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category],
+          currentQuestionIndex: nextQuestionIndex
+        }
+      }));
+    } else {
+      // Si no hay más preguntas, avanzar al final
+      setRecommendationStatus(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category],
+          currentQuestionIndex: allQuestions.length
+        }
+      }));
+    }
+  }, [recommendationStatus, userTestAnswers]);
 
   const handleCloseFeedbackModal = useCallback(() => {
     setShowFeedbackModal(false);
@@ -1073,30 +1173,33 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                       <div className="flex justify-between items-center">
                         <span>Progreso:</span>
                         <span>
-                          Pregunta{" "}
-                          {Math.min(
-                            (status?.currentQuestionIndex || 0) + 1,
-                            allQuestions.length
-                          )}{" "}
-                          de {allQuestions.length}
+                          {(() => {
+                            const progress = calculateRealProgress(category);
+                            if (progress.totalQuestionsWithRecommendations === 0) {
+                              return "Completado (todas las respuestas fueron correctas)";
+                            }
+                            return `Pregunta ${progress.completedQuestionsWithRecommendations + 1} de ${progress.totalQuestionsWithRecommendations}`;
+                          })()}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
-                          className="bg-blue-600 h-2.5 rounded-full"
+                          className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
                           style={{
-                            width: `${
-                              ((status?.currentQuestionIndex || 0) /
-                                allQuestions.length) *
-                              100
-                            }%`,
+                            width: `${(() => {
+                              const progress = calculateRealProgress(category);
+                              return progress.progressPercentage;
+                            })()}%`,
                           }}
                         ></div>
                       </div>
                     </div>
                   </div>
 
-                  {(status?.currentQuestionIndex || 0) < allQuestions.length ? (
+                  {(() => {
+                    const progress = calculateRealProgress(category);
+                    return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
+                  })() ? (
                     <>
                       {currentRecommendations.length > 0 ? (
                         currentRecommendations.map((rec) => (
@@ -1124,8 +1227,13 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                   ) : (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
                       <p>
-                        ¡Has completado todas las actividades para esta
-                        categoría!
+                        {(() => {
+                          const progress = calculateRealProgress(category);
+                          if (progress.totalQuestionsWithRecommendations === 0) {
+                            return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
+                          }
+                          return "¡Has completado todas las actividades para esta categoría!";
+                        })()}
                       </p>
                     </div>
                   )}

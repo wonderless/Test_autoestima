@@ -126,7 +126,7 @@ feedbackQuestions: [
       // Pregunta 9
       {
         id: 'recFisicoQ9',
-        questionAsked: "¿Considero que tengo bonito rostro?",
+        questionAsked: "¿Considero que tengo bonito rostro?9",
         questionAnsweredIncorrectly: true,
         title: "CONCEPTO DE BELLEZA",
         description: `La belleza es un concepto que indica la cualidad de un ser u objeto que resulta agradable para una persona. Además, está referida a la capacidad de algo para agradar a los sentidos, no obstante, la belleza está relacionada a valores subjetivos, debido a que lo que se considera bello para una persona puede no serlo para otra; además, las preferencias estéticas están influenciadas por factores culturales, sociales y personales, en los que destacan los medios de comunicación que arbitrariamente presenta modelos de belleza para imponer su propia ideología, que aliena a la persona, por lo que deberíamos evitar su influencia negativa sobre la belleza.
