@@ -184,8 +184,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     const cleanupInterval = setInterval(cleanupExpiredTimers, 30000);
     
     return () => {
-      activeTimers.current.forEach(timer => clearInterval(timer));
-      activeTimers.current.clear();
+      const timers = activeTimers.current;
+      timers.forEach(timer => clearInterval(timer));
+      timers.clear();
       clearInterval(cleanupInterval);
     };
   }, [cleanupExpiredTimers]);
@@ -365,13 +366,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     currentProgress: ActivityProgress;
   }> = ({ recommendation, categoryKey, currentProgress }) => {
     const currentDay = recommendation.days?.[currentProgress.currentDay - 1];
-    if (!currentDay) return null;
-
-    const currentActivity = currentDay.activities[currentProgress.currentActivityIndex];
-    const isLastActivityOfDay = currentProgress.currentActivityIndex === currentDay.activities.length - 1;
-    const isLastDay = recommendation.days ? currentProgress.currentDay === recommendation.days.length : false;
-    const hasCountdown = currentProgress.countdown !== null && currentProgress.countdown !== undefined;
-
+    
     // Obtener recomendaciones para navegación - optimizado con useMemo
     const navigationData = useMemo(() => {
       const allRecommendations = getRecommendationsForCategory(
@@ -386,7 +381,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         canGoPrev: currentIndex > 0,
         canGoNext: currentIndex < allRecommendations.length - 1
       };
-    }, [categoryKey, recommendation.id, recommendationStatus, userTestAnswers]);
+    }, [categoryKey, recommendation.id, getRecommendationsForCategory]);
 
     // Función para encontrar la siguiente pregunta que necesita recomendación
     const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
@@ -434,7 +429,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           }
         }));
       }
-    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+    }, [categoryKey, findNextQuestionWithRecommendation]);
 
     const handleNextClick = useCallback(() => {
       const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
@@ -449,11 +444,18 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           }
         }));
       }
-    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+    }, [categoryKey, findNextQuestionWithRecommendation]);
 
     const handleCompleteActivity = useCallback(() => {
       completeActivity(categoryKey, recommendation.id);
     }, [completeActivity, categoryKey, recommendation.id]);
+
+    if (!currentDay) return null;
+
+    const currentActivity = currentDay.activities[currentProgress.currentActivityIndex];
+    const isLastActivityOfDay = currentProgress.currentActivityIndex === currentDay.activities.length - 1;
+    const isLastDay = recommendation.days ? currentProgress.currentDay === recommendation.days.length : false;
+    const hasCountdown = currentProgress.countdown !== null && currentProgress.countdown !== undefined;
 
     if (hasCountdown) {
       return (
@@ -546,8 +548,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }>(({ recommendation, categoryKey }) => {
     const currentProgress = recommendationStatus[categoryKey]?.recommendationProgress?.[recommendation.id];
     
-    if (!currentProgress) return null;
-
     // Obtener recomendaciones para navegación - optimizado con useMemo
     const navigationData = useMemo(() => {
       const allRecommendations = getRecommendationsForCategory(
@@ -562,7 +562,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         canGoPrev: currentIndex > 0,
         canGoNext: currentIndex < allRecommendations.length - 1
       };
-    }, [categoryKey, recommendation.id, recommendationStatus, userTestAnswers]);
+    }, [categoryKey, recommendation.id, getRecommendationsForCategory]);
 
     // Función para encontrar la siguiente pregunta que necesita recomendación
     const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
@@ -610,7 +610,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           }
         }));
       }
-    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+    }, [categoryKey, findNextQuestionWithRecommendation]);
 
     const handleNextClick = useCallback(() => {
       const currentQuestionIndex = recommendationStatus[categoryKey]?.currentQuestionIndex || 0;
@@ -625,7 +625,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           }
         }));
       }
-    }, [categoryKey, recommendationStatus, findNextQuestionWithRecommendation]);
+    }, [categoryKey, findNextQuestionWithRecommendation]);
+
+    if (!currentProgress) return null;
 
     if (currentProgress.isCompleted) {
       return (
@@ -670,9 +672,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
         <h3 className="text-xl font-bold mb-2">{recommendation.title}</h3>
         {recommendation.questionAsked && (
-          <p className="text-sm text-gray-600 mb-2">
-            Pregunta: "{recommendation.questionAsked}" - Tu respuesta: {recommendation.questionAnsweredIncorrectly ? "NO" : "SÍ"}
-          </p>
+                  <p className="text-sm text-gray-600 mb-2">
+          Pregunta: &quot;{recommendation.questionAsked}&quot; - Tu respuesta: {recommendation.questionAnsweredIncorrectly ? "SÍ" : "NO"}
+        </p>
         )}
         <p className="text-gray-700 mb-4">{recommendation.description}</p>
         
@@ -686,6 +688,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       </div>
     );
   });
+  RecommendationDisplay.displayName = 'RecommendationDisplay';
 
   // Funciones optimizadas con useCallback
   const saveResultsToFirebase = useCallback(async (
@@ -1088,6 +1091,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       {children}
     </button>
   ));
+  OptimizedButton.displayName = 'OptimizedButton';
 
   if (error) {
     return (
