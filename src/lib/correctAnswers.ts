@@ -3,67 +3,35 @@ export const answersveracityQuestions = [true, true, true, true, true, true]
 // El valor booleano indica si la respuesta correcta es "Sí" (true) o "No" (false)
 
 export const correctAnswers: Record<number, boolean> = {
-  /*
-    1: true,//Pregunta academica
-    2: true,//Pregunta social
-    3: false,//Pregunta personal
-    4: false,//Pregunta academica
-    5: true,//Pregunta social
-    6: true,// Pregunta de veracidad
-    7: true,//Pregunta fisica
-    8: false,//Pregunta personal
-    9: true,//Pregunta fisica
-    10: false,//Pregunta personal
-    11: true,// Pregunta de veracidad
-    12: true,//Pregunta fisica
-    13: true,//Pregunta personal
-    14: true,//Pregunta academica
-    15: false,//Pregunta academica
-    16: true,//Pregunta academica
-    17: true,//Pregunta social
-    18: false,//Pregunta fisica
-    19: true,// Pregunta de veracidad
-    20: false,//Pregunta personal
-    21: true,//Pregunta fisica
-    22: true,// Pregunta de veracidad
-    23: false,//Pregunta social
-    24: true,// Pregunta de veracidad
-    25: true,//Pregunta academica
-    26: true,//Pregunta personal
-    27: false,//Pregunta social
-    28: true,//Pregunta fisica
-    29: true,//Pregunta social
-    30: true// Pregunta de veracidad
-    */
-  1: true,
+1: true,
 2: true,
-3: true,
-4: true,
-5: true,
-6: true,
+3: false,
+4: false,
+5: false,
+6: false,//
 7: true,
-8: true,
+8: false,
 9: true,
-10: true,
-11: true,
+10: false,
+11: false,//
 12: true,
 13: true,
 14: true,
-15: true,
+15: false,
 16: true,
-17: true,
-18: true,
-19: true,
-20: true,
+17: false,
+18: false,
+19: false,//
+20: false,
 21: true,
-22: true,
+22: false,//
 23: true,
-24: true,
+24: false,//
 25: true,
 26: true,
 27: true,
 28: true,
 29: true,
-30: true,
+30: false,//
 
   }

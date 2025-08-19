@@ -1527,7 +1527,7 @@ La siguiente rutina busca fortalecer la percepción de autoeficacia en el proces
   relatedQuestion: 1,
 },
 
-
+ // Pregunta 5
 {
   id: 'recAcademicoQ5',
   questionAsked: "¿No soy bueno(a) para dar exámenes?",
@@ -2030,69 +2030,36 @@ Reforzar una visión más amplia y realista de las capacidades cognitivas permit
 // Define correct answers for all relevant questions.
 // This should match your correctAnswers.ts file.
 export const mockCorrectAnswers: Record<number, boolean> = {
-  /*
-  1: true,
-  2: true,
-  3: false,
-  4: false,
-  5: true,
-  6: true,
-  7: true, // "Considero que tengo bonito rostro." -> TRUE is correct
-  8: false,
-  9: true, // "Me siento bien con mi peso." -> TRUE is correct
-  10: false,
-  11: true,
-  12: true, // "Tengo un buen estado de salud." -> TRUE is correct
-  13: true,
-  14: true,
-  15: false,
-  16: true,
-  17: true,
-  18: false, // "No estoy conforme con mi altura." -> FALSE is correct (meaning you ARE conforme)
-  19: false,
-  20: false,
-  21: true, // "Me gusta el color de mi piel." -> TRUE is correct
-  22: true,
-  23: false,
-  24: false,
-  25: true,
-  26: true,
-  27: false,
-  28: true, // "Siento que mis ojos van bien con mi físico." -> TRUE is correct
-  29: true,
-  30: false,
-
-  */
 1: true,
 2: true,
-3: true,
-4: true,
-5: true,
-6: true,
+3: false,
+4: false,
+5: false,
+6: false,//
 7: true,
-8: true,
+8: false,
 9: true,
-10: true,
-11: true,
+10: false,
+11: false,//
 12: true,
 13: true,
 14: true,
-15: true,
+15: false,
 16: true,
-17: true,
-18: true,
-19: true,
-20: true,
+17: false,
+18: false,
+19: false,//
+20: false,
 21: true,
-22: true,
+22: false,//
 23: true,
-24: true,
+24: false,//
 25: true,
 26: true,
 27: true,
 28: true,
 29: true,
-30: true,
+30: false,//
 
 };
 
@@ -2109,7 +2076,7 @@ export const getDetailedRecommendations = (
   const categoryQuestionsMap = { // This map needs to be consistent with ResultsDisplay
     personal: [3, 8, 10, 13, 20, 26],
     social: [2, 4, 17, 23, 27, 29],
-    academico: [1, 4, 14, 15, 16, 25],
+    academico: [1, 5, 14, 15, 16, 25],
     fisico: [7, 9, 12, 18, 21, 28]
   };
 
