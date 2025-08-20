@@ -460,27 +460,27 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     if (hasCountdown) {
       return (
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+        <div className="bg-blue-50 p-4 sm:p-6 rounded-lg border border-blue-200">
           <div className="text-center">
-            <h3 className="text-xl font-bold text-green-700 mb-4">
+            <h3 className="text-lg sm:text-xl font-bold text-green-700 mb-3 sm:mb-4">
               ¡Felicidades!
             </h3>
-            <p className="text-lg mb-4">
+            <p className="text-base sm:text-lg mb-3 sm:mb-4">
               Has completado todas las actividades del Día {currentProgress.currentDay}.
             </p>
-            <p className="text-lg mb-6">
+            <p className="text-base sm:text-lg mb-4 sm:mb-6">
               Las actividades del Día {currentProgress.currentDay + 1} estarán disponibles en:
             </p>
-            <div className="text-3xl font-bold text-blue-700 mb-6">
+            <div className="text-2xl sm:text-3xl font-bold text-blue-700 mb-4 sm:mb-6">
               {formatTimeRemaining(currentProgress.countdown!, currentProgress.countdownStartTime!)}
             </div>
             
             {/* Botones de navegación */}
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
               <OptimizedButton
                 onClick={handlePrevClick}
                 disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') === null}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                   findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') !== null
                     ? "bg-yellow-600 text-white hover:bg-yellow-700" 
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
@@ -491,7 +491,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               <OptimizedButton
                 onClick={handleNextClick}
                 disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') === null}
-                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                   findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') !== null
                     ? "bg-green-600 text-white hover:bg-green-700" 
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
@@ -506,17 +506,17 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     }
 
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <h3 className="text-xl font-bold mb-4">Día {currentProgress.currentDay}</h3>
+      <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200">
+        <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Día {currentProgress.currentDay}</h3>
         
         {currentActivity && (
-          <div className="mb-6">
-            <h4 className="text-lg font-semibold mb-2">{currentActivity.title}</h4>
-            <p className="text-gray-700 mb-4">{currentActivity.description}</p>
+          <div className="mb-4 sm:mb-6">
+            <h4 className="text-base sm:text-lg font-semibold mb-2">{currentActivity.title}</h4>
+            <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">{currentActivity.description}</p>
             
             <OptimizedButton
               onClick={handleCompleteActivity}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base"
             >
               {isLastActivityOfDay ? "Culminar Día" : "Marcar Actividad Completada"}
             </OptimizedButton>
@@ -524,8 +524,8 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         )}
 
         {/* Progreso del día */}
-        <div className="mb-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
+        <div className="mb-3 sm:mb-4">
+          <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
             <span>Progreso del día:</span>
             <span>{currentProgress.currentActivityIndex + 1} de {currentDay.activities.length}</span>
           </div>
@@ -632,20 +632,20 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     if (currentProgress.isCompleted) {
       return (
-        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-          <h3 className="text-xl font-bold text-green-700 mb-2">
+        <div className="bg-green-50 p-4 sm:p-6 rounded-lg border border-green-200">
+          <h3 className="text-lg sm:text-xl font-bold text-green-700 mb-2">
             ✅ {recommendation.title}
           </h3>
-          <p className="text-green-600 mb-4">
+          <p className="text-green-600 mb-3 sm:mb-4 text-sm sm:text-base">
             ¡Has completado todas las actividades de esta recomendación!
           </p>
           
           {/* Botones de navegación siempre visibles */}
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
             <OptimizedButton
               onClick={handlePrevClick}
               disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') === null}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'prev') !== null
                   ? "bg-yellow-600 text-white hover:bg-yellow-700" 
                   : "bg-gray-400 text-gray-200 cursor-not-allowed"
@@ -656,7 +656,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             <OptimizedButton
               onClick={handleNextClick}
               disabled={findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') === null}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 findNextQuestionWithRecommendation(recommendationStatus[categoryKey]?.currentQuestionIndex || 0, 'next') !== null
                   ? "bg-green-600 text-white hover:bg-green-700" 
                   : "bg-gray-400 text-gray-200 cursor-not-allowed"
@@ -670,14 +670,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     }
 
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <h3 className="text-xl font-bold mb-2">{recommendation.title}</h3>
+      <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 mb-4 sm:mb-6">
+        <h3 className="text-lg sm:text-xl font-bold mb-2">{recommendation.title}</h3>
         {recommendation.questionAsked && (
-                  <p className="text-sm text-gray-600 mb-2">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-2">
           Pregunta: &quot;{recommendation.questionAsked}&quot; - Tu respuesta: {recommendation.questionAnsweredIncorrectly ? "SÍ" : "NO"}
         </p>
         )}
-        <p className="text-gray-700 mb-4">{recommendation.description}</p>
+        <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">{recommendation.description}</p>
         
         {recommendation.days && (
           <DayActivitiesRenderer
@@ -1159,9 +1159,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded">
-          <p className="text-red-700">{error}</p>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <div className="bg-red-100 border-l-4 border-red-500 p-3 sm:p-4 rounded">
+          <p className="text-red-700 text-sm sm:text-base">{error}</p>
         </div>
       </div>
     );
@@ -1169,15 +1169,15 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   if (!isVeracityValid) {
     return (
-      <div className="max-w-2xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-white">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-white">
           Resultados del Test
         </h1>
-        <div className="bg-celeste border-l-4 p-8 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
+        <div className="bg-celeste border-l-4 p-4 sm:p-8 rounded-lg">
+          <div className="flex flex-col sm:flex-row">
+            <div className="flex-shrink-0 mb-3 sm:mb-0">
               <svg
-                className="h-6 w-6 "
+                className="h-6 w-6 mx-auto sm:mx-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1190,10 +1190,10 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 />
               </svg>
             </div>
-            <div className="ml-3">
-              <h3 className="text-lg font-medium">Respuestas Inconsistentes</h3>
+            <div className="sm:ml-3 text-center sm:text-left">
+              <h3 className="text-base sm:text-lg font-medium">Respuestas Inconsistentes</h3>
               <div className="mt-2">
-                <p>
+                <p className="text-sm sm:text-base">
                   Hemos detectado algunas inconsistencias en tus respuestas.
                   Para obtener una evaluación precisa de tu autoestima, es
                   importante que respondas con total sinceridad. ¿Te gustaría
@@ -1201,12 +1201,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 </p>
               </div>
               <div className="mt-4">
-                                  <button
-                    onClick={handleResetTest}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
-                  >
-                    Realizar Test Nuevamente
-                  </button>
+                <button
+                  onClick={handleResetTest}
+                  className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
+                >
+                  Realizar Test Nuevamente
+                </button>
               </div>
             </div>
           </div>
@@ -1222,19 +1222,19 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     Object.keys(recommendationStatus).length === 0
   ) {
     return (
-      <div className="text-center text-white">
+      <div className="text-center text-white text-sm sm:text-base">
         Cargando resultados y recomendaciones...
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4">
-      <h1 className="text-3xl font-bold text-center mb-8 text-white">
+    <div className="w-full px-2 sm:px-4">
+      <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-white">
         Resultados del Test de Autoestima
       </h1>
 
-      <div className="text-center text-lg font-bold mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm w-full">
+      <div className="text-center text-base sm:text-lg font-bold mb-4 sm:mb-6 bg-celeste rounded-lg border border-gray-300 p-3 sm:p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
         <span className={getLevelColor(generalLevel || "MEDIO")}>
           {generalLevel}
@@ -1250,17 +1250,17 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         fisicoY={calculatePointCoordinate(results.fisico.score, 250, 1)}
       />
 
-      <h1 className="text-3xl font-bold text-center mt-6 mb-6 text-white">
+      <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
         Sistema de Actividades Personalizadas
       </h1>
 
       {/* Indicador de progreso de aspectos */}
-      <div className="mb-6">
-        <div className="flex justify-center space-x-2 mb-4">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-center space-x-2 mb-3 sm:mb-4">
           {aspectCategories.map((aspect, index) => (
             <div
               key={aspect}
-              className={`w-3 h-3 rounded-full ${
+              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
                 index === currentAspectIndex
                   ? 'bg-blue-600'
                   : index < currentAspectIndex
@@ -1270,21 +1270,21 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             />
           ))}
         </div>
-        <p className="text-center text-white text-sm">
+        <p className="text-center text-white text-xs sm:text-sm">
           Aspecto {currentAspectIndex + 1} de {aspectCategories.length}: {currentAspect.charAt(0).toUpperCase() + currentAspect.slice(1)}
         </p>
       </div>
 
       {/* Contenido del aspecto actual */}
       {currentAspectData && currentAspectStatus && (
-        <div className="bg-celeste p-6 rounded-lg shadow-lg w-full mb-6">
-          <h2 className="text-xl capitalize mb-4">Dominio {currentAspect}</h2>
+        <div className="bg-celeste p-4 sm:p-6 rounded-lg shadow-lg w-full mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl capitalize mb-3 sm:mb-4">Dominio {currentAspect}</h2>
           
-          <div className="space-y-4 mb-6">
+          <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             <div className="flex items-center justify-between">
-              <span className="font-medium">Nivel:</span>
+              <span className="font-medium text-sm sm:text-base">Nivel:</span>
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(
+                className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getLevelClass(
                   currentAspectData.level
                 )}`}
               >
@@ -1292,8 +1292,8 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-medium">Puntuación:</span>
-              <span>{currentAspectData.score}/6</span>
+              <span className="font-medium text-sm sm:text-base">Puntuación:</span>
+              <span className="text-sm sm:text-base">{currentAspectData.score}/6</span>
             </div>
           </div>
 
@@ -1305,9 +1305,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 currentAspectData.level,
                 userTestAnswers || {}
               ).map((rec) => (
-                <div key={rec.id} className="mt-4 p-4 bg-white rounded-md">
-                  <h3 className="font-semibold text-lg">{rec.title}</h3>
-                  <p className="mt-2 text-gray-700">{rec.description}</p>
+                <div key={rec.id} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white rounded-md">
+                  <h3 className="font-semibold text-base sm:text-lg">{rec.title}</h3>
+                  <p className="mt-2 text-gray-700 text-sm sm:text-base">{rec.description}</p>
                 </div>
               ))}
             </div>
@@ -1337,8 +1337,8 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                     ))}
                 </>
               ) : (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-                  <p>
+                <div className="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-3 rounded relative mb-4">
+                  <p className="text-sm sm:text-base">
                     {(() => {
                       const progress = calculateRealProgress(currentAspect);
                       if (progress.totalQuestionsWithRecommendations === 0) {
@@ -1355,11 +1355,11 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       )}
 
       {/* Navegación entre aspectos */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
         <button
           onClick={handlePrevAspect}
           disabled={currentAspectIndex === 0}
-          className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+          className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
             currentAspectIndex === 0
               ? "bg-gray-400 text-gray-200 cursor-not-allowed"
               : "bg-blue-600 text-white hover:bg-blue-700"
@@ -1368,40 +1368,40 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           Anterior Aspecto
         </button>
 
-                 <div className="text-center text-white">
-           {isCurrentAspectCompleted() ? (
-             <div className="mb-2">
-               <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
-             </div>
-           ) : currentAspectData?.level === "BAJO" ? (
-             <div className="mb-2">
-               <span className="text-yellow-400">⚠ Completa todas las actividades para continuar</span>
-             </div>
-           ) : null}
-         </div>
+        <div className="text-center text-white text-xs sm:text-sm">
+          {isCurrentAspectCompleted() ? (
+            <div className="mb-2">
+              <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
+            </div>
+          ) : currentAspectData?.level === "BAJO" ? (
+            <div className="mb-2">
+              <span className="text-yellow-400">⚠ Completa todas las actividades para continuar</span>
+            </div>
+          ) : null}
+        </div>
 
-                 <button
-           onClick={handleNextAspect}
-           disabled={currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()}
-           className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-             currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()
-               ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-               : "bg-green-600 text-white hover:bg-green-700"
-           }`}
-         >
-           Siguiente Aspecto
-         </button>
+        <button
+          onClick={handleNextAspect}
+          disabled={currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()}
+          className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+            currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()
+              ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+              : "bg-green-600 text-white hover:bg-green-700"
+          }`}
+        >
+          Siguiente Aspecto
+        </button>
       </div>
 
       {/* Botón para repetir el test cuando todos los aspectos estén completados */}
       {areAllAspectsCompleted() && (
-        <div className="mt-8 text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">
+        <div className="mt-6 sm:mt-8 text-center">
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
             ¡Felicitaciones! Has completado todas las actividades
           </h3>
           <button
             onClick={handleResetTest}
-            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
+            className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
           >
             Realizar Test Otra Vez
           </button>
@@ -1409,14 +1409,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       )}
 
       {showFeedbackModal && currentFeedbackRec && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
               Retroalimentación para: {currentFeedbackRec.title}
             </h3>
             {currentFeedbackRec.feedbackQuestions?.map((q) => (
-              <div key={q.key} className="mb-4">
-                <p className="font-medium mb-2">{q.question}</p>
+              <div key={q.key} className="mb-3 sm:mb-4">
+                <p className="font-medium mb-2 text-sm sm:text-base">{q.question}</p>
                 <div className="flex space-x-4">
                   <label className="inline-flex items-center">
                     <input
@@ -1427,7 +1427,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                       checked={feedbackAnswers[q.key] === true}
                       onChange={() => handleFeedbackSubmit(q.key, true)}
                     />
-                    <span className="ml-2">Sí</span>
+                    <span className="ml-2 text-sm sm:text-base">Sí</span>
                   </label>
                   <label className="inline-flex items-center">
                     <input
@@ -1438,21 +1438,21 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                       checked={feedbackAnswers[q.key] === false}
                       onChange={() => handleFeedbackSubmit(q.key, false)}
                     />
-                    <span className="ml-2">No</span>
+                    <span className="ml-2 text-sm sm:text-base">No</span>
                   </label>
                 </div>
               </div>
             ))}
-            <div className="flex justify-end space-x-4 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-4 sm:mt-6">
               <button
                 onClick={handleCloseFeedbackModal}
-                className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors text-sm sm:text-base"
               >
                 Cerrar
               </button>
               <button
                 onClick={submitAllFeedback}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
                 Enviar Retroalimentación
               </button>

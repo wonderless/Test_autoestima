@@ -49,15 +49,14 @@ export default function Results() {
 
   if (isLoading) {
     return (
-<div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     )
   }
 
   return (
-    <div className="w-full px-4 py-8">
-
+    <div className="w-full px-2 sm:px-4 py-4 sm:py-8 min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
       {userId && userInfo && (
         <ResultsDisplay userId={userId} userInfo={userInfo} />
       )}
