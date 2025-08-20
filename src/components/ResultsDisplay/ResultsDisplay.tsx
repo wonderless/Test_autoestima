@@ -129,6 +129,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const [feedbackAnswers, setFeedbackAnswers] = useState<
     Record<string, boolean>
   >({});
+  const [currentAspectIndex, setCurrentAspectIndex] = useState(0);
 
   // Temporizadores activos
   const activeTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -1076,6 +1077,69 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     setShowFeedbackModal(false);
   }, []);
 
+  // Array de aspectos en orden
+  const aspectCategories = ['personal', 'social', 'academico', 'fisico'];
+
+  // Función para navegar al siguiente aspecto
+  const handleNextAspect = useCallback(() => {
+    setCurrentAspectIndex(prev => Math.min(prev + 1, aspectCategories.length - 1));
+  }, []);
+
+  // Función para navegar al aspecto anterior
+  const handlePrevAspect = useCallback(() => {
+    setCurrentAspectIndex(prev => Math.max(prev - 1, 0));
+  }, []);
+
+  // Obtener el aspecto actual
+  const currentAspect = aspectCategories[currentAspectIndex];
+  const currentAspectData = results?.[currentAspect as keyof Results];
+  const currentAspectStatus = recommendationStatus?.[currentAspect];
+
+  // Función para verificar si el aspecto actual está completado
+  const isCurrentAspectCompleted = useCallback(() => {
+    if (!currentAspectData || !currentAspectStatus) return false;
+    
+    // Si el nivel no es BAJO, está completado automáticamente
+    if (currentAspectData.level !== "BAJO") return true;
+    
+    // Para nivel BAJO, verificar si se completaron todas las actividades de los 3 días
+    const recommendations = getRecommendationsForCategory(
+      currentAspect,
+      currentAspectData.level,
+      userTestAnswers || {}
+    );
+    
+    // Verificar que todas las recomendaciones estén completadas
+    return recommendations.every(rec => {
+      const progress = currentAspectStatus.recommendationProgress?.[rec.id];
+      return progress?.isCompleted === true;
+    });
+  }, [currentAspectData, currentAspectStatus, currentAspect, getRecommendationsForCategory, userTestAnswers]);
+
+  // Función para verificar si todos los aspectos están completados
+  const areAllAspectsCompleted = useCallback(() => {
+    return aspectCategories.every(aspect => {
+      const aspectData = results?.[aspect as keyof Results];
+      const aspectStatus = recommendationStatus?.[aspect];
+      
+      if (!aspectData || !aspectStatus) return false;
+      
+      if (aspectData.level !== "BAJO") return true;
+      
+      // Para nivel BAJO, verificar que todas las recomendaciones estén completadas
+      const recommendations = getRecommendationsForCategory(
+        aspect,
+        aspectData.level,
+        userTestAnswers || {}
+      );
+      
+      return recommendations.every(rec => {
+        const progress = aspectStatus.recommendationProgress?.[rec.id];
+        return progress?.isCompleted === true;
+      });
+    });
+  }, [results, recommendationStatus, aspectCategories, getRecommendationsForCategory, userTestAnswers]);
+
   // Componente de botón optimizado para evitar re-renderizados
   const OptimizedButton = memo<{
     onClick: () => void;
@@ -1190,151 +1254,154 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         Sistema de Actividades Personalizadas
       </h1>
 
-      <div className="grid grid-cols-1 gap-6 w-full">
-        {Object.entries(results).map(([category, data]) => {
-          const status = recommendationStatus?.[category];
-          const recommendationsForCategory = getRecommendationsForCategory(
-            category,
-            data.level,
-            userTestAnswers || {}
-          );
-
-          if (!status) return null;
-
-          // Para niveles MEDIO y ALTO, mostramos solo el mensaje general
-          if (data.level !== "BAJO") {
-            return (
-              <div
-                key={category}
-                className="bg-celeste p-6 rounded-lg shadow-lg w-full"
-              >
-                <h2 className="text-xl capitalize mb-4">Dominio {category}</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">Nivel:</span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(
-                        data.level
-                      )}`}
-                    >
-                      {data.level}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">Puntuación:</span>
-                    <span>{data.score}/6</span>
-                  </div>
-                </div>
-
-                {recommendationsForCategory.map((rec) => (
-                  <div key={rec.id} className="mt-4 p-4 bg-white rounded-md">
-                    <h3 className="font-semibold text-lg">{rec.title}</h3>
-                    <p className="mt-2 text-gray-700">{rec.description}</p>
-                  </div>
-                ))}
-              </div>
-            );
-          }
-
-          // Para nivel BAJO, mostramos el sistema completo de actividades
-          const currentRecommendations = recommendationsForCategory.filter(
-            (rec) => {
-              const questionNum = categoryQuestions[category as keyof typeof categoryQuestions][status?.currentQuestionIndex || 0];
-              return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
-            }
-          );
-
-          const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
-          const isLastQuestion = status.currentQuestionIndex >= allQuestions.length - 1;
-
-          return (
+      {/* Indicador de progreso de aspectos */}
+      <div className="mb-6">
+        <div className="flex justify-center space-x-2 mb-4">
+          {aspectCategories.map((aspect, index) => (
             <div
-              key={category}
-              className="bg-celeste p-6 rounded-lg shadow-lg w-full"
-            >
-              <button
-                onClick={() => toggleSection(category)}
-                className="w-full flex justify-between items-center text-left py-2 px-4 rounded-md bg-mi-color-rgb text-white font-semibold mb-4"
-              >
-                <h2 className="text-xl capitalize">Dominio {category}</h2>
-                <span className="text-2xl">{status.isOpen ? "−" : "+"}</span>
-              </button>
-
-              {status.isOpen && (
-                <>
-                  <div className="space-y-4 mb-6">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Nivel:</span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(
-                          data.level
-                        )}`}
-                      >
-                        {data.level}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Puntuación:</span>
-                      <span>{data.score}/6</span>
-                    </div>
-
-                    
-                  </div>
-
-                  {(() => {
-                    const progress = calculateRealProgress(category);
-                    return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
-                  })() ? (
-                    <>
-                      {currentRecommendations.length > 0 ? (
-                        currentRecommendations.map((rec) => (
-                          <RecommendationDisplay
-                            key={rec.id}
-                            recommendation={rec}
-                            categoryKey={category}
-                          />
-                        ))
-                      ) : (
-                        <div className="mb-4 p-4 bg-green-100 border border-green-200 rounded-md">
-                          <p>
-                            No hay recomendaciones específicas para esta
-                            pregunta. Tu respuesta fue adecuada.
-                          </p>
-                          <button
-                            onClick={() => handleContinueToNextQuestion(category)}
-                            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                          >
-                            Continuar a la siguiente pregunta
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-                      <p>
-                        {(() => {
-                          const progress = calculateRealProgress(category);
-                          if (progress.totalQuestionsWithRecommendations === 0) {
-                            return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
-                          }
-                          return "¡Has completado todas las actividades para esta categoría!";
-                        })()}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          );
-        })}
+              key={aspect}
+              className={`w-3 h-3 rounded-full ${
+                index === currentAspectIndex
+                  ? 'bg-blue-600'
+                  : index < currentAspectIndex
+                  ? 'bg-green-500'
+                  : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-center text-white text-sm">
+          Aspecto {currentAspectIndex + 1} de {aspectCategories.length}: {currentAspect.charAt(0).toUpperCase() + currentAspect.slice(1)}
+        </p>
       </div>
 
-      {allCategoriesCompleted && (
+      {/* Contenido del aspecto actual */}
+      {currentAspectData && currentAspectStatus && (
+        <div className="bg-celeste p-6 rounded-lg shadow-lg w-full mb-6">
+          <h2 className="text-xl capitalize mb-4">Dominio {currentAspect}</h2>
+          
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Nivel:</span>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${getLevelClass(
+                  currentAspectData.level
+                )}`}
+              >
+                {currentAspectData.level}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-medium">Puntuación:</span>
+              <span>{currentAspectData.score}/6</span>
+            </div>
+          </div>
+
+          {/* Para niveles MEDIO y ALTO, mostrar solo recomendaciones generales */}
+          {currentAspectData.level !== "BAJO" ? (
+            <div>
+              {getRecommendationsForCategory(
+                currentAspect,
+                currentAspectData.level,
+                userTestAnswers || {}
+              ).map((rec) => (
+                <div key={rec.id} className="mt-4 p-4 bg-white rounded-md">
+                  <h3 className="font-semibold text-lg">{rec.title}</h3>
+                  <p className="mt-2 text-gray-700">{rec.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Para nivel BAJO, mostrar el sistema completo de actividades */
+            <div>
+              {(() => {
+                const progress = calculateRealProgress(currentAspect);
+                return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
+              })() ? (
+                <>
+                  {getRecommendationsForCategory(
+                    currentAspect,
+                    currentAspectData.level,
+                    userTestAnswers || {}
+                  )
+                    .filter((rec) => {
+                      const questionNum = categoryQuestions[currentAspect as keyof typeof categoryQuestions][currentAspectStatus?.currentQuestionIndex || 0];
+                      return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
+                    })
+                    .map((rec) => (
+                      <RecommendationDisplay
+                        key={rec.id}
+                        recommendation={rec}
+                        categoryKey={currentAspect}
+                      />
+                    ))}
+                </>
+              ) : (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                  <p>
+                    {(() => {
+                      const progress = calculateRealProgress(currentAspect);
+                      if (progress.totalQuestionsWithRecommendations === 0) {
+                        return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
+                      }
+                      return "¡Has completado todas las actividades para esta categoría!";
+                    })()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Navegación entre aspectos */}
+      <div className="flex justify-between items-center mb-6">
+        <button
+          onClick={handlePrevAspect}
+          disabled={currentAspectIndex === 0}
+          className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+            currentAspectIndex === 0
+              ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+        >
+          Anterior Aspecto
+        </button>
+
+                 <div className="text-center text-white">
+           {isCurrentAspectCompleted() ? (
+             <div className="mb-2">
+               <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
+             </div>
+           ) : currentAspectData?.level === "BAJO" ? (
+             <div className="mb-2">
+               <span className="text-yellow-400">⚠ Completa todas las actividades para continuar</span>
+             </div>
+           ) : null}
+         </div>
+
+                 <button
+           onClick={handleNextAspect}
+           disabled={currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()}
+           className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+             currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()
+               ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+               : "bg-green-600 text-white hover:bg-green-700"
+           }`}
+         >
+           Siguiente Aspecto
+         </button>
+      </div>
+
+      {/* Botón para repetir el test cuando todos los aspectos estén completados */}
+      {areAllAspectsCompleted() && (
         <div className="mt-8 text-center">
+          <h3 className="text-2xl font-bold text-white mb-4">
+            ¡Felicitaciones! Has completado todas las actividades
+          </h3>
           <button
             onClick={handleResetTest}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
           >
             Realizar Test Otra Vez
           </button>
