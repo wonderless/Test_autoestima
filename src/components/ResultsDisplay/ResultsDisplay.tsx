@@ -20,7 +20,7 @@ interface Results {
   personal: CategoryScore;
   social: CategoryScore;
   academico: CategoryScore;
-  fisico: CategoryScore;
+  fisico: CategoryScore; 
 }
 
 interface Props {
@@ -96,18 +96,58 @@ const formatTimeRemaining = (seconds: number, countdownStartTime?: number): stri
   } else {
     // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
     if (countdownStartTime) {
-      const unlockTime = new Date(countdownStartTime + (countdownStartTime ? seconds * 1000 : 0));
-      const options: Intl.DateTimeFormatOptions = {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: 'numeric',
-        month: 'long'
-      };
+      // Calcular el tiempo de desbloqueo basado en el tiempo inicial, no en el tiempo restante actual
+      const unlockTime = new Date(countdownStartTime + (300 * 1000)); // 300 segundos = 5 minutos
       return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
     }
     return "Falta menos de 10 minutos";
   }
 };
+
+// Componente optimizado para mostrar el countdown sin re-renderizar el resto
+const CountdownDisplay = memo<{
+  countdownStartTime: number;
+  onComplete: () => void;
+}>(({ countdownStartTime, onComplete }) => {
+  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutos en segundos
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - countdownStartTime) / 1000);
+      const remaining = Math.max(0, 300 - elapsed);
+      
+      if (remaining <= 0) {
+        clearInterval(timer);
+        onComplete();
+        return;
+      }
+      
+      setTimeRemaining(remaining);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [countdownStartTime, onComplete]);
+  
+  if (timeRemaining <= 0) return null;
+  
+  const hours = Math.floor(timeRemaining / 3600);
+  const minutes = Math.floor((timeRemaining % 3600) / 60);
+  
+  if (hours > 0) {
+    return <span>Falta {hours} hora{hours > 1 ? 's' : ''}</span>;
+  } else if (minutes >= 10) {
+    return <span>Faltan {minutes} minutos</span>;
+  } else {
+    // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
+    const unlockTime = new Date(countdownStartTime + (300 * 1000)); // 300 segundos = 5 minutos
+    return (
+      <span>
+        Se desbloqueará la actividad a las {unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del {unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+      </span>
+    );
+  }
+});
+CountdownDisplay.displayName = 'CountdownDisplay';
 
 export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const router = useRouter();
@@ -145,9 +185,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         if (categoryData?.recommendationProgress) {
           Object.keys(categoryData.recommendationProgress).forEach(recommendationId => {
             const progress = categoryData.recommendationProgress[recommendationId];
-            if (progress?.countdown && progress?.countdownStartTime) {
+            if (progress?.countdownStartTime) {
               const elapsed = Math.floor((Date.now() - progress.countdownStartTime) / 1000);
-              const remaining = Math.max(0, progress.countdown - elapsed);
+              const remaining = Math.max(0, 300 - elapsed); // 300 segundos = 5 minutos
               
               if (remaining <= 0) {
                 // El temporizador expiró, desbloquear el siguiente día
@@ -163,8 +203,11 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 // Limpiar el temporizador activo si existe
                 const timerKey = `${category}-${recommendationId}`;
                 if (activeTimers.current.has(timerKey)) {
-                  clearInterval(activeTimers.current.get(timerKey)!);
-                  activeTimers.current.delete(timerKey);
+                  const timer = activeTimers.current.get(timerKey);
+                  if (timer) {
+                    clearTimeout(timer);
+                    activeTimers.current.delete(timerKey);
+                  }
                 }
               }
             }
@@ -186,11 +229,20 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     
     return () => {
       const timers = activeTimers.current;
-      timers.forEach(timer => clearInterval(timer));
+      timers.forEach(timer => clearTimeout(timer));
       timers.clear();
       clearInterval(cleanupInterval);
     };
   }, [cleanupExpiredTimers]);
+
+  // Función para limpiar temporizadores al desmontar
+  useEffect(() => {
+    const timers = activeTimers.current;
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   // Función para iniciar un temporizador - optimizada con useCallback
   const startTimer = useCallback((category: string, recommendationId: string, duration: number = 300) => {
@@ -217,62 +269,61 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       }
     }));
 
-    // Crear nuevo temporizador - optimizado para reducir re-renderizados
-    const timer = setInterval(() => {
-      setRecommendationStatus(prev => {
-        const currentProgress = prev[category]?.recommendationProgress[recommendationId];
-        if (!currentProgress || !currentProgress.countdown) {
-          clearInterval(timer);
-          activeTimers.current.delete(timerKey);
-          return prev;
-        }
-
-        // Calcular el tiempo real transcurrido desde el inicio del countdown
-        const elapsed = currentProgress.countdownStartTime 
-          ? Math.floor((Date.now() - currentProgress.countdownStartTime) / 1000)
-          : 0;
-        const actualRemaining = Math.max(0, duration - elapsed);
-        
-        if (actualRemaining <= 0) {
-          clearInterval(timer);
-          activeTimers.current.delete(timerKey);
-          
-          // Desbloquear el siguiente día
-          return {
-            ...prev,
-            [category]: {
-              ...prev[category],
-              recommendationProgress: {
-                ...prev[category]?.recommendationProgress || {},
-                [recommendationId]: {
-                  ...currentProgress,
-                  countdown: null,
-                  countdownStartTime: null,
-                  currentDay: currentProgress.currentDay + 1,
-                  currentActivityIndex: 0
-                }
-              }
-            }
-          };
-        }
-
-        return {
-          ...prev,
-          [category]: {
-            ...prev[category],
-            recommendationProgress: {
-              ...prev[category]?.recommendationProgress || {},
-              [recommendationId]: {
-                ...currentProgress,
-                countdown: actualRemaining
-              }
-            }
-          }
-        };
-      });
-    }, 5000); // Actualizar cada 5 segundos
+    // El CountdownDisplay se encarga de mostrar el tiempo y completar automáticamente
+    // Solo necesitamos limpiar el temporizador cuando se complete
+    const timer = setTimeout(() => {
+      activeTimers.current.delete(timerKey);
+    }, duration * 1000);
 
     activeTimers.current.set(timerKey, timer);
+  }, []);
+
+  const getRecommendationsForCategory = useCallback((
+    category: string,
+    level: "ALTO" | "MEDIO" | "BAJO",
+    answers: Record<number, boolean>
+  ) => {
+    // Para niveles ALTO y MEDIO, devolver solo las recomendaciones generales
+    if (level !== "BAJO") {
+      return (
+        allRecommendations[category as keyof typeof allRecommendations][
+          level
+        ] || []
+      );
+    }
+
+    // Para nivel BAJO, devolver solo las recomendaciones específicas por pregunta respondida incorrectamente
+    const questionNumbers =
+      categoryQuestions[category as keyof typeof categoryQuestions];
+    const questionBasedRecs: RecommendationItem[] = [];
+
+    questionNumbers.forEach((questionNum) => {
+      const userAnswer = answers[questionNum];
+      const correctAnswer = importedCorrectAnswers[questionNum];
+
+      // Solo agregar recomendaciones si la respuesta fue incorrecta
+      if (userAnswer !== correctAnswer) {
+        const questionRecs = (
+          allRecommendations[category as keyof typeof allRecommendations][
+            "BAJO"
+          ] as RecommendationItem[]
+        ).filter((rec) => rec.relatedQuestion === questionNum);
+
+        questionBasedRecs.push(...questionRecs);
+      }
+    });
+
+    // Si no hay recomendaciones específicas, devolver las generales de nivel BAJO
+    if (questionBasedRecs.length === 0) {
+      const generalRecs = (
+        allRecommendations[category as keyof typeof allRecommendations][
+          "BAJO"
+        ] as RecommendationItem[]
+      ).filter((rec) => !rec.relatedQuestion);
+      return generalRecs;
+    }
+
+    return questionBasedRecs;
   }, []);
 
   // Función para completar una actividad - optimizada con useCallback
@@ -280,10 +331,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     const currentProgress = recommendationStatus[category]?.recommendationProgress?.[recommendationId];
     if (!currentProgress) return;
 
+    if (!userTestAnswers) return;
+    
     const recommendation = getRecommendationsForCategory(
       category,
       recommendationStatus[category]?.categoryLevel || "BAJO",
-      userTestAnswers!
+      userTestAnswers
     ).find(rec => rec.id === recommendationId);
 
     if (!recommendation?.days) return;
@@ -322,7 +375,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         }
       } else {
         // Iniciar temporizador para el siguiente día
-        startTimer(category, recommendationId, 300); // 5 minutos
+        startTimer(category, recommendationId, 300); // 5 minutos (300 segundos)
       }
     } else {
       // Avanzar a la siguiente actividad del mismo día
@@ -366,14 +419,17 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     categoryKey: string;
     currentProgress: ActivityProgress;
   }> = ({ recommendation, categoryKey, currentProgress }) => {
+    const setRecommendationStatusLocal = setRecommendationStatus;
     const currentDay = recommendation.days?.[currentProgress.currentDay - 1];
     
     // Obtener recomendaciones para navegación - optimizado con useMemo
     const navigationData = useMemo(() => {
+      if (!userTestAnswers) return { allRecommendations: [], currentIndex: -1, canGoPrev: false, canGoNext: false };
+      
       const allRecommendations = getRecommendationsForCategory(
         categoryKey,
         recommendationStatus[categoryKey]?.categoryLevel || "BAJO",
-        userTestAnswers!
+        userTestAnswers
       );
       const currentIndex = allRecommendations.findIndex(rec => rec.id === recommendation.id);
       return {
@@ -382,12 +438,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         canGoPrev: currentIndex > 0,
         canGoNext: currentIndex < allRecommendations.length - 1
       };
-    }, [categoryKey, recommendation.id, getRecommendationsForCategory]);
+    }, [categoryKey, recommendation.id, userTestAnswers, getRecommendationsForCategory]);
 
     // Función para encontrar la siguiente pregunta que necesita recomendación
     const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
+      if (!userTestAnswers) return null;
+      
       const allQuestions = categoryQuestions[categoryKey as keyof typeof categoryQuestions];
-      const userAnswers = userTestAnswers!;
+      const userAnswers = userTestAnswers;
       
       if (direction === 'next') {
         // Buscar hacia adelante
@@ -414,7 +472,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       }
       
       return null; // No hay más preguntas con recomendaciones
-    }, [categoryKey, userTestAnswers]);
+    }, [categoryKey]);
 
     // Handlers optimizados con useCallback
     const handlePrevClick = useCallback(() => {
@@ -449,7 +507,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     const handleCompleteActivity = useCallback(() => {
       completeActivity(categoryKey, recommendation.id);
-    }, [completeActivity, categoryKey, recommendation.id]);
+    }, [categoryKey, recommendation.id, completeActivity]);
 
     if (!currentDay) return null;
 
@@ -472,7 +530,28 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               Las actividades del Día {currentProgress.currentDay + 1} estarán disponibles en:
             </p>
             <div className="text-2xl sm:text-3xl font-bold text-blue-700 mb-4 sm:mb-6">
-              {formatTimeRemaining(currentProgress.countdown!, currentProgress.countdownStartTime!)}
+              <CountdownDisplay 
+                countdownStartTime={currentProgress.countdownStartTime!}
+                onComplete={() => {
+                  // Cuando se complete el countdown, actualizar el estado
+                  setRecommendationStatusLocal(prev => ({
+                    ...prev,
+                    [categoryKey]: {
+                      ...prev[categoryKey],
+                      recommendationProgress: {
+                        ...prev[categoryKey]?.recommendationProgress || {},
+                        [recommendation.id]: {
+                          ...currentProgress,
+                          countdown: null,
+                          countdownStartTime: null,
+                          currentDay: currentProgress.currentDay + 1,
+                          currentActivityIndex: 0
+                        }
+                      }
+                    }
+                  }));
+                }}
+              />
             </div>
             
             {/* Botones de navegación */}
@@ -551,10 +630,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     
     // Obtener recomendaciones para navegación - optimizado con useMemo
     const navigationData = useMemo(() => {
+      if (!userTestAnswers) return { allRecommendations: [], currentIndex: -1, canGoPrev: false, canGoNext: false };
+      
       const allRecommendations = getRecommendationsForCategory(
         categoryKey,
         recommendationStatus[categoryKey]?.categoryLevel || "BAJO",
-        userTestAnswers!
+        userTestAnswers
       );
       const currentIndex = allRecommendations.findIndex(rec => rec.id === recommendation.id);
       return {
@@ -563,12 +644,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         canGoPrev: currentIndex > 0,
         canGoNext: currentIndex < allRecommendations.length - 1
       };
-    }, [categoryKey, recommendation.id, getRecommendationsForCategory]);
+    }, [categoryKey, recommendation.id, userTestAnswers, getRecommendationsForCategory]);
 
     // Función para encontrar la siguiente pregunta que necesita recomendación
     const findNextQuestionWithRecommendation = useCallback((currentQuestionIndex: number, direction: 'next' | 'prev') => {
+      if (!userTestAnswers) return null;
+      
       const allQuestions = categoryQuestions[categoryKey as keyof typeof categoryQuestions];
-      const userAnswers = userTestAnswers!;
+      const userAnswers = userTestAnswers;
       
       if (direction === 'next') {
         // Buscar hacia adelante
@@ -595,7 +678,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       }
       
       return null; // No hay más preguntas con recomendaciones
-    }, [categoryKey, userTestAnswers]);
+    }, [categoryKey]);
 
     // Handlers optimizados con useCallback
     const handlePrevClick = useCallback(() => {
@@ -731,54 +814,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     }
   }, [userId]);
 
-  const getRecommendationsForCategory = useCallback((
-    category: string,
-    level: "ALTO" | "MEDIO" | "BAJO",
-    answers: Record<number, boolean>
-  ) => {
-    // Para niveles ALTO y MEDIO, devolver solo las recomendaciones generales
-    if (level !== "BAJO") {
-      return (
-        allRecommendations[category as keyof typeof allRecommendations][
-          level
-        ] || []
-      );
-    }
-
-    // Para nivel BAJO, devolver solo las recomendaciones específicas por pregunta respondida incorrectamente
-    const questionNumbers =
-      categoryQuestions[category as keyof typeof categoryQuestions];
-    const questionBasedRecs: RecommendationItem[] = [];
-
-    questionNumbers.forEach((questionNum) => {
-      const userAnswer = answers[questionNum];
-      const correctAnswer = importedCorrectAnswers[questionNum];
-
-      // Solo agregar recomendaciones si la respuesta fue incorrecta
-      if (userAnswer !== correctAnswer) {
-        const questionRecs = (
-          allRecommendations[category as keyof typeof allRecommendations][
-            "BAJO"
-          ] as RecommendationItem[]
-        ).filter((rec) => rec.relatedQuestion === questionNum);
-
-        questionBasedRecs.push(...questionRecs);
-      }
-    });
-
-    // Si no hay recomendaciones específicas, devolver las generales de nivel BAJO
-    if (questionBasedRecs.length === 0) {
-      const generalRecs = (
-        allRecommendations[category as keyof typeof allRecommendations][
-          "BAJO"
-        ] as RecommendationItem[]
-      ).filter((rec) => !rec.relatedQuestion);
-      return generalRecs;
-    }
-
-    return questionBasedRecs;
-  }, []);
-
   const toggleSection = useCallback((category: string) => {
     setRecommendationStatus((prevStatus) => ({
       ...prevStatus,
@@ -905,14 +940,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             };
 
             // Reiniciar temporizadores si hay countdown activo
-            if (savedRecData?.countdown && savedRecData.countdown > 0) {
-              const elapsed = savedRecData.countdownStartTime 
-                ? Math.floor((Date.now() - savedRecData.countdownStartTime) / 1000)
-                : 0;
-              const remaining = Math.max(0, savedRecData.countdown - elapsed);
+            if (savedRecData?.countdownStartTime) {
+              const elapsed = Math.floor((Date.now() - savedRecData.countdownStartTime) / 1000);
+              const remaining = Math.max(0, 300 - elapsed); // 300 segundos = 5 minutos
               
               if (remaining > 0) {
-                startTimer(category, rec.id, remaining);
+                startTimer(category, rec.id, 300); // Siempre usar 300 segundos (5 minutos)
               } else {
                 // Si el tiempo ya expiró, desbloquear el siguiente día inmediatamente
                 categoryRecProgress[rec.id] = {
@@ -970,8 +1003,17 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   // Función para calcular el progreso real basado en preguntas que necesitan recomendaciones
   const calculateRealProgress = useCallback((category: string) => {
+    if (!userTestAnswers) {
+      return {
+        totalQuestionsWithRecommendations: 0,
+        completedQuestionsWithRecommendations: 0,
+        currentQuestionIndex: 0,
+        progressPercentage: 100
+      };
+    }
+    
     const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
-    const userAnswers = userTestAnswers!;
+    const userAnswers = userTestAnswers;
     const currentQuestionIndex = recommendationStatus[category]?.currentQuestionIndex || 0;
     
     // Contar cuántas preguntas necesitan recomendaciones
@@ -999,7 +1041,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         ? (completedQuestionsWithRecommendations / totalQuestionsWithRecommendations) * 100 
         : 100
     };
-  }, [userTestAnswers, recommendationStatus]);
+  }, [recommendationStatus, userTestAnswers]);
 
   const allCategoriesCompleted = useMemo(() => Boolean(
     results &&
@@ -1011,7 +1053,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         const progress = calculateRealProgress(category);
         return progress.completedQuestionsWithRecommendations >= progress.totalQuestionsWithRecommendations;
       })
-  ), [results, recommendationStatus, userTestAnswers, calculateRealProgress]);
+  ), [results, recommendationStatus, calculateRealProgress, userTestAnswers]);
 
   const handleResetTest = useCallback(async () => {
     try {
@@ -1034,9 +1076,11 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, [userId, router]);
 
   const handleContinueToNextQuestion = useCallback((category: string) => {
+    if (!userTestAnswers) return;
+    
     const currentQuestionIndex = recommendationStatus[category]?.currentQuestionIndex || 0;
     const allQuestions = categoryQuestions[category as keyof typeof categoryQuestions];
-    const userAnswers = userTestAnswers!;
+    const userAnswers = userTestAnswers;
     
     // Buscar la siguiente pregunta que necesita recomendación
     let nextQuestionIndex = currentQuestionIndex + 1;
@@ -1078,12 +1122,12 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, []);
 
   // Array de aspectos en orden
-  const aspectCategories = ['personal', 'social', 'academico', 'fisico'];
+  const aspectCategories = useMemo(() => ['personal', 'social', 'academico', 'fisico'], []);
 
   // Función para navegar al siguiente aspecto
   const handleNextAspect = useCallback(() => {
     setCurrentAspectIndex(prev => Math.min(prev + 1, aspectCategories.length - 1));
-  }, []);
+  }, [aspectCategories.length]);
 
   // Función para navegar al aspecto anterior
   const handlePrevAspect = useCallback(() => {
@@ -1114,7 +1158,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       const progress = currentAspectStatus.recommendationProgress?.[rec.id];
       return progress?.isCompleted === true;
     });
-  }, [currentAspectData, currentAspectStatus, currentAspect, getRecommendationsForCategory, userTestAnswers]);
+  }, [currentAspectData, currentAspectStatus, currentAspect, getRecommendationsForCategory]);
 
   // Función para verificar si todos los aspectos están completados
   const areAllAspectsCompleted = useCallback(() => {
@@ -1300,10 +1344,10 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           {/* Para niveles MEDIO y ALTO, mostrar solo recomendaciones generales */}
           {currentAspectData.level !== "BAJO" ? (
             <div>
-              {getRecommendationsForCategory(
+              {userTestAnswers && getRecommendationsForCategory(
                 currentAspect,
                 currentAspectData.level,
-                userTestAnswers || {}
+                userTestAnswers
               ).map((rec) => (
                 <div key={rec.id} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white rounded-md">
                   <h3 className="font-semibold text-base sm:text-lg">{rec.title}</h3>
@@ -1315,14 +1359,15 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             /* Para nivel BAJO, mostrar el sistema completo de actividades */
             <div>
               {(() => {
+                if (!userTestAnswers) return false;
                 const progress = calculateRealProgress(currentAspect);
                 return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
               })() ? (
                 <>
-                  {getRecommendationsForCategory(
+                  {userTestAnswers && getRecommendationsForCategory(
                     currentAspect,
                     currentAspectData.level,
-                    userTestAnswers || {}
+                    userTestAnswers
                   )
                     .filter((rec) => {
                       const questionNum = categoryQuestions[currentAspect as keyof typeof categoryQuestions][currentAspectStatus?.currentQuestionIndex || 0];
@@ -1340,6 +1385,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                 <div className="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-3 rounded relative mb-4">
                   <p className="text-sm sm:text-base">
                     {(() => {
+                      if (!userTestAnswers) return "Cargando...";
                       const progress = calculateRealProgress(currentAspect);
                       if (progress.totalQuestionsWithRecommendations === 0) {
                         return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
