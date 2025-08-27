@@ -1,6 +1,6 @@
 interface Question {
   id: number
-  text: string
+  text: string 
 }
 export const veracityQuestions = [6, 11, 19, 22, 24, 30]
 export const questions: Question[] = [

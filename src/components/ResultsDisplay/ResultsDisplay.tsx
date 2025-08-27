@@ -959,6 +959,20 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             }
           });
 
+          // Determinar un currentQuestionIndex válido:
+          // 1) Si hay un valor guardado, usarlo (pero clamp dentro del rango).
+          // 2) Si no, encontrar el primer índice de pregunta en esta categoría cuya respuesta sea incorrecta.
+          const savedIndex = savedRecommendationProgress[category]?.currentQuestionIndex;
+          const questionNums = categoryQuestions[category as keyof typeof categoryQuestions] || [];
+          // Buscar primer índice con respuesta incorrecta
+          let firstWrongIndex = questionNums.findIndex(qn => answers[qn] !== importedCorrectAnswers[qn]);
+          if (firstWrongIndex === -1) firstWrongIndex = 0; // si no hay incorrectas, fallback a 0
+
+          // Si hay savedIndex, asegurarse que esté dentro de los límites [0, questionNums.length - 1]
+          let initialIndex = typeof savedIndex === 'number' ? savedIndex : firstWrongIndex;
+          if (initialIndex < 0) initialIndex = 0;
+          if (initialIndex > Math.max(0, questionNums.length - 1)) initialIndex = questionNums.length - 1;
+
           initialRecommendationStatus[category] = {
             isOpen:
               savedRecommendationProgress[category]?.isOpen !== undefined
@@ -967,11 +981,10 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             userAnswers: answers,
             categoryLevel: catLevel,
             recommendationProgress: categoryRecProgress,
-            currentQuestionIndex:
-              savedRecommendationProgress[category]?.currentQuestionIndex ?? 0,
+            currentQuestionIndex: initialIndex,
           };
-        });
-        setRecommendationStatus(initialRecommendationStatus);
+         });
+         setRecommendationStatus(initialRecommendationStatus);
       } catch (error) {
         console.error("Error processing results:", error);
         setError("Hubo un error al procesar tus resultados.");
@@ -1370,7 +1383,11 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                     userTestAnswers
                   )
                     .filter((rec) => {
-                      const questionNum = categoryQuestions[currentAspect as keyof typeof categoryQuestions][currentAspectStatus?.currentQuestionIndex || 0];
+                      // Clampear el índice antes de obtener el número de pregunta para evitar índices fuera de rango
+                      const questionsForAspect = categoryQuestions[currentAspect as keyof typeof categoryQuestions] || [];
+                      const rawIndex = currentAspectStatus?.currentQuestionIndex ?? 0;
+                      const clampedIndex = Math.min(Math.max(rawIndex, 0), Math.max(0, questionsForAspect.length - 1));
+                      const questionNum = questionsForAspect[clampedIndex];
                       return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
                     })
                     .map((rec) => (

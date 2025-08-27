@@ -65,6 +65,35 @@ export default function RegisterForm() {
     }));
   };
 
+  // Agregar lista de departamentos del Perú
+  const departamentos = [
+    "Amazonas",
+    "Áncash",
+    "Apurímac",
+    "Arequipa",
+    "Ayacucho",
+    "Cajamarca",
+    "Callao",
+    "Cusco",
+    "Huancavelica",
+    "Huánuco",
+    "Ica",
+    "Junín",
+    "La Libertad",
+    "Lambayeque",
+    "Lima",
+    "Loreto",
+    "Madre de Dios",
+    "Moquegua",
+    "Pasco",
+    "Piura",
+    "Puno",
+    "San Martín",
+    "Tacna",
+    "Tumbes",
+    "Ucayali",
+  ];
+
   const validateStep1 = () => {
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
@@ -352,15 +381,21 @@ export default function RegisterForm() {
                 >
                   Departamento
                 </label>
-                <input
+                <select
                   id="departamento"
                   name="departamento"
-                  type="text"
                   value={personalInfo.departamento}
                   onChange={handlePersonalInfoChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   required
-                />
+                >
+                  <option value="">Seleccionar departamento</option>
+                  {departamentos.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
               </div>
             </>
           )}

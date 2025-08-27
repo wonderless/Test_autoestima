@@ -17,7 +17,7 @@ export default function ConsentPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen w-full px-4 text-center space-y-6">
-      <h1 className="text-2xl font-bold text-white">Test de Autoestima General: Software para la medición y orientación del autoestima</h1>
+      <h1 className="text-2xl font-bold text-white">Programa de evaluación y orientación de la autoestima</h1>
       
       <div className="flex flex-col items-center w-full">
         <div className="inline-flex items-start justify-center text-left max-w-xs mx-auto">
