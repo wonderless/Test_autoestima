@@ -522,7 +522,7 @@ Vamos a realizar algunas actividades que nos ayudarán a mejorar nuestra relaci�
       {
         id: "personalAlto1",
         title: "¡Felicidades! Autoestima personal alta",
-        description: `¡Felicidades! Los resultados demostraron que posees un nivel alto de la dimensión de autoestima descrita. Las personas en esta categoría ya tienen una valoración positiva de su carácter, valores y su persona. Sin embargo, se puede propiciar que se mantengan en el tiempo. Las siguientes acciones fortalecer este nivel de autoestima. Primero Reflexionar sobre sus decisiones éticas y cómo afectan positivamente su entorno. Esto implica detenerse a analizar si las elecciones que toman día a día están alineadas con sus principios y cómo estas decisiones contribuyen a crear un impacto positivo en las personas que los rodean, ya sea en el ámbito laboral, familiar o social. Esta práctica refuerza la conexión con sus valores fundamentales y fomenta un sentido de propósito. Asi mismo, el Evaluar periódicamente si sus acciones actuales reflejan los valores que más aprecian. Es decir, Tomarse el tiempo para autoevaluarse permite identificar áreas donde podrían haber desvíos entre sus valores y sus comportamientos actuales. Este ejercicio no solo fortalece la autoestima, sino que también fomenta la coherencia personal y la autenticidad, elementos esenciales para mantener una autoestima alta.
+        description: `¡Felicidades! Los resultados demostraron que posees un nivel alto de autoestima personal. Las personas en esta categoría tienen una valoración positiva de su carácter, así como de sus valores. 
 `
       }
     ],
@@ -1039,7 +1039,7 @@ Vamos a realizar algunas actividades que nos ayudarán a mejorar nuestra relaci�
       {
         id: "socialAlto1",
         title: "¡Felicidades! Autoestima social alta",
-        description: `Tienes un nivel alto de autoestima en relaciones sociales.`
+        description: `¡Felicidades! Tienes un nivel alto de autoestima social. Lo que quiere decir, que mantienes muy buenas interacciones con las personas que te rodean, sea en tu zona de residencia, institución académica, trabajo o cualquier entorno en el que te encuentres rodeado de otras personas.`
       }
     ],
     MEDIO: [
@@ -1419,7 +1419,9 @@ Sin embargo, la amistad también se aprende, se construye y se fortalece con peq
       {
         id: "academicoAlto1",
         title: "¡Felicidades! Autoestima académica alta",
-        description: `¡Felicidades! Los resultados del test demostraron un nivel alto del autoestima descrita. Mantener una valoración positiva sobre las competencias intelectuales implica reconocer los logros obtenidos y enfrentar los retos novedosos con seguridad y confianza plena en las propias capacidades. Felicitaciones por tus resultados académica, resulta recomendable fomentar el aprendizaje continuo, ya sea participando en actividades académicas o explorando nuevas áreas de interés para incorporar nuevos conocimientos. Adicionalmente, el acto de compartir los aprendizajes y enseñar a otras personas ayuda a fortalecer y consolidar el conocimiento obtenido. Finalmente, y como punto más importante, es vital tomar en consideración el esfuerzo por encima de los resultados, teniendo en cuenta que el proceso para incorporar nuevos aprendizajes es tan importante como los logros obtenidos a través de estos.
+        description: `¡Felicidades! Autoestima académica alta
+¡Felicidades! Tienes un nivel alto de autoestima académica. El cual se ve expresado en la valoración positiva sobre tus competencias intelectuales, las cuales te permiten destacar en ambientes académicos enfrentando los aprendizajes y el desarrollo de competencias necesarias para tu perfil profesional con seguridad y confianza.
+
 `
       }
     ],
