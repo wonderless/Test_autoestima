@@ -1319,6 +1319,9 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
         Orientaciones y recomendaciones a seguir
       </h1>
+      <p className="text-center text-white text-sm sm:text-base mb-4">
+        Se recomienda realizar las siguientes actividades para mejorar su autoestima y así poder prevenir posibles problemas psicológicos relacionados con una baja autoestima.
+      </p>
 
       {/* Indicador de progreso de aspectos */}
       <div className="mb-4 sm:mb-6">
