@@ -95,11 +95,11 @@ const UserDashboard = () => {
       <div className="mb-4 text-center">
         <h2 className="text-lg font-semibold">AUTOR:</h2>
         <p>Alex Grajeda Montalvo</p>
-        <p>Arteaga Torres Ashley Yazbel</p>
-        <p>Aynaya Camayo Eliane Ruth</p>
-        <p>Salvador Vega Joao Sebastian</p>
-        <p>Sosa Lupuche Carlos Manuel</p>
-        <p>Tafur Arzapalo Aragon Josue</p>
+        <p>Ashley Yazbel Arteaga Torres</p>
+        <p>Eliane Ruth Aynaya Camayo</p>
+        <p>Joao Sebastian Salvador Vega </p>
+        <p>Carlos Manuel Sosa Lupuche</p>
+        <p>Aragon Josue Tafur Arzapalo</p>
         
       </div>
 

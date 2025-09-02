@@ -1448,18 +1448,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             <div className="mb-2">
               <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
             </div>
-          ) : currentAspectData?.level === "BAJO" ? (
-            <div className="mb-2">
-              <span className="text-yellow-400">⚠ Completa todas las actividades para continuar</span>
-            </div>
           ) : null}
         </div>
 
         <button
           onClick={handleNextAspect}
-          disabled={currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()}
+          disabled={currentAspectIndex === aspectCategories.length - 1}
           className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
-            currentAspectIndex === aspectCategories.length - 1 || !isCurrentAspectCompleted()
+            currentAspectIndex === aspectCategories.length - 1
               ? "bg-gray-400 text-gray-200 cursor-not-allowed"
               : "bg-green-600 text-white hover:bg-green-700"
           }`}
