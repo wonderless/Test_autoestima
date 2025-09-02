@@ -97,7 +97,7 @@ const formatTimeRemaining = (seconds: number, countdownStartTime?: number): stri
     // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
     if (countdownStartTime) {
       // Calcular el tiempo de desbloqueo basado en el tiempo inicial, no en el tiempo restante actual
-      const unlockTime = new Date(countdownStartTime + (300 * 1000)); // 300 segundos = 5 minutos
+      const unlockTime = new Date(countdownStartTime + (10 * 1000)); // 10 segundos
       return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
     }
     return "Falta menos de 10 minutos";
@@ -109,12 +109,12 @@ const CountdownDisplay = memo<{
   countdownStartTime: number;
   onComplete: () => void;
 }>(({ countdownStartTime, onComplete }) => {
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutos en segundos
+  const [timeRemaining, setTimeRemaining] = useState(10); // 10 segundos
   
   useEffect(() => {
     const timer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - countdownStartTime) / 1000);
-      const remaining = Math.max(0, 300 - elapsed);
+      const remaining = Math.max(0, 10 - elapsed);
       
       if (remaining <= 0) {
         clearInterval(timer);
@@ -139,7 +139,7 @@ const CountdownDisplay = memo<{
     return <span>Faltan {minutes} minutos</span>;
   } else {
     // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
-    const unlockTime = new Date(countdownStartTime + (300 * 1000)); // 300 segundos = 5 minutos
+    const unlockTime = new Date(countdownStartTime + (10 * 1000)); // 10 segundos
     return (
       <span>
         Se desbloqueará la actividad a las {unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del {unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
@@ -188,7 +188,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             const progress = categoryData.recommendationProgress[recommendationId];
             if (progress?.countdownStartTime) {
               const elapsed = Math.floor((Date.now() - progress.countdownStartTime) / 1000);
-              const remaining = Math.max(0, 300 - elapsed); // 300 segundos = 5 minutos
+              const remaining = Math.max(0, 10 - elapsed); // 10 segundos
               
               if (remaining <= 0) {
                 // El temporizador expiró, desbloquear el siguiente día
@@ -246,7 +246,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, []);
 
   // Función para iniciar un temporizador - optimizada con useCallback
-  const startTimer = useCallback((category: string, recommendationId: string, duration: number = 300) => {
+  const startTimer = useCallback((category: string, recommendationId: string, duration: number = 10) => {
     const timerKey = `${category}-${recommendationId}`;
     
     // Limpiar temporizador existente si lo hay
@@ -376,7 +376,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         }
       } else {
         // Iniciar temporizador para el siguiente día
-        startTimer(category, recommendationId, 300); // 5 minutos (300 segundos)
+        startTimer(category, recommendationId, 10); // 10 segundos
       }
     } else {
       // Avanzar a la siguiente actividad del mismo día
@@ -405,7 +405,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           currentActivityIndex: isLastActivityOfDay ? 0 : nextActivityIndex,
           completedActivities: [...(currentProgress.completedActivities || []), currentProgress.currentActivityIndex],
           isCompleted: isLastDay,
-          countdown: isLastActivityOfDay && !isLastDay ? 300 : null,
+          countdown: isLastActivityOfDay && !isLastDay ? 10 : null,
           countdownStartTime: isLastActivityOfDay && !isLastDay ? Date.now() : null
         }
       });
@@ -938,10 +938,10 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             // Reiniciar temporizadores si hay countdown activo
             if (savedRecData?.countdownStartTime) {
               const elapsed = Math.floor((Date.now() - savedRecData.countdownStartTime) / 1000);
-              const remaining = Math.max(0, 300 - elapsed); // 300 segundos = 5 minutos
+              const remaining = Math.max(0, 10 - elapsed); // 10 segundos
               
               if (remaining > 0) {
-                startTimer(category, rec.id, 300); // Siempre usar 300 segundos (5 minutos)
+                startTimer(category, rec.id, 10); // Siempre usar 10 segundos
               } else {
                 // Si el tiempo ya expiró, desbloquear el siguiente día inmediatamente
                 categoryRecProgress[rec.id] = {
