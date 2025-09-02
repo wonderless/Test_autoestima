@@ -1218,16 +1218,27 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     disabled?: boolean;
     className: string;
     children: React.ReactNode;
-  }>(({ onClick, disabled = false, className, children }) => (
+  }>((props) => (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
+      onClick={props.onClick}
+      disabled={props.disabled}
+      className={props.className}
     >
-      {children}
+      {props.children}
     </button>
   ));
   OptimizedButton.displayName = 'OptimizedButton';
+
+  // NUEVO: comprobar si LOS 4 aspectos están en nivel ALTO
+  const allFourHigh = useMemo(() => {
+    if (!results) return false;
+    return (
+      results.personal?.level === "ALTO" &&
+      results.social?.level === "ALTO" &&
+      results.academico?.level === "ALTO" &&
+      results.fisico?.level === "ALTO"
+    );
+  }, [results]);
 
   if (error) {
     return (
@@ -1316,167 +1327,180 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         generalLevel={generalLevel}
       />
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
-        Orientaciones y recomendaciones a seguir
-      </h1>
-      <p className="text-center text-white text-sm sm:text-base mb-4">
-        Se recomienda realizar las siguientes actividades para mejorar su autoestima y así poder prevenir posibles problemas psicológicos relacionados con una baja autoestima.
-      </p>
-
-      {/* Indicador de progreso de aspectos */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex justify-center space-x-2 mb-3 sm:mb-4">
-          {aspectCategories.map((aspect, index) => (
-            <div
-              key={aspect}
-              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
-                index === currentAspectIndex
-                  ? 'bg-blue-600'
-                  : index < currentAspectIndex
-                  ? 'bg-green-500'
-                  : 'bg-gray-300'
-              }`}
-            />
-          ))}
+      {/* REEMPLAZO: Si los 4 aspectos están en ALTO mostrar mensaje de agradecimiento,
+          de lo contrario mostrar la UI existente de orientaciones y recomendaciones */}
+      {allFourHigh ? (
+        <div className="mt-8 p-6 bg-white rounded-lg shadow-md max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold mb-3 text-gray-800">Gracias por tu valiosa participación</h2>
+          <p className="text-gray-700 text-base">
+            Ahora presentas una muy buena autoestima y esperamos sigas manteniéndola así. Éxitos.
+          </p>
         </div>
-        <p className="text-center text-white text-xs sm:text-sm">
-          Aspecto {currentAspectIndex + 1} de {aspectCategories.length}: {currentAspect.charAt(0).toUpperCase() + currentAspect.slice(1)}
-        </p>
-      </div>
+      ) : (
+        <>
+          <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
+            Orientaciones y recomendaciones a seguir
+          </h1>
+          <p className="text-center text-white text-sm sm:text-base mb-4">
+            Se recomienda realizar las siguientes actividades para mejorar su autoestima y así poder prevenir posibles problemas psicológicos relacionados con una baja autoestima.
+          </p>
 
-      {/* Contenido del aspecto actual */}
-      {currentAspectData && currentAspectStatus && (
-        <div className="bg-celeste p-4 sm:p-6 rounded-lg shadow-lg w-full mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl capitalize mb-3 sm:mb-4">Dominio {currentAspect}</h2>
-          
-          <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sm sm:text-base">Nivel:</span>
-              <span
-                className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getLevelClass(
-                  currentAspectData.level
-                )}`}
-              >
-                {currentAspectData.level}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sm sm:text-base">Puntuación:</span>
-              <span className="text-sm sm:text-base">{currentAspectData.score}/6</span>
-            </div>
-          </div>
-
-          {/* Para niveles MEDIO y ALTO, mostrar solo recomendaciones generales */}
-          {currentAspectData.level !== "BAJO" ? (
-            <div>
-              {userTestAnswers && getRecommendationsForCategory(
-                currentAspect,
-                currentAspectData.level,
-                userTestAnswers
-              ).map((rec) => (
-                <div key={rec.id} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white rounded-md">
-                  <h3 className="font-semibold text-base sm:text-lg">{rec.title}</h3>
-                  <p className="mt-2 text-gray-700 text-sm sm:text-base">{rec.description}</p>
-                </div>
+          {/* Indicador de progreso de aspectos */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex justify-center space-x-2 mb-3 sm:mb-4">
+              {aspectCategories.map((aspect, index) => (
+                <div
+                  key={aspect}
+                  className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
+                    index === currentAspectIndex
+                      ? 'bg-blue-600'
+                      : index < currentAspectIndex
+                      ? 'bg-green-500'
+                      : 'bg-gray-300'
+                  }`}
+                />
               ))}
             </div>
-          ) : (
-            /* Para nivel BAJO, mostrar el sistema completo de actividades */
-            <div>
-              {(() => {
-                if (!userTestAnswers) return false;
-                const progress = calculateRealProgress(currentAspect);
-                return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
-              })() ? (
-                <>
+            <p className="text-center text-white text-xs sm:text-sm">
+              Aspecto {currentAspectIndex + 1} de {aspectCategories.length}: {currentAspect.charAt(0).toUpperCase() + currentAspect.slice(1)}
+            </p>
+          </div>
+
+          {/* Contenido del aspecto actual */}
+          {currentAspectData && currentAspectStatus && (
+            <div className="bg-celeste p-4 sm:p-6 rounded-lg shadow-lg w-full mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl capitalize mb-3 sm:mb-4">Dominio {currentAspect}</h2>
+              
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm sm:text-base">Nivel:</span>
+                  <span
+                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getLevelClass(
+                      currentAspectData.level
+                    )}`}
+                  >
+                    {currentAspectData.level}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm sm:text-base">Puntuación:</span>
+                  <span className="text-sm sm:text-base">{currentAspectData.score}/6</span>
+                </div>
+              </div>
+
+              {/* Para niveles MEDIO y ALTO, mostrar solo recomendaciones generales */}
+              {currentAspectData.level !== "BAJO" ? (
+                <div>
                   {userTestAnswers && getRecommendationsForCategory(
                     currentAspect,
                     currentAspectData.level,
                     userTestAnswers
-                  )
-                    .filter((rec) => {
-                      // Clampear el índice antes de obtener el número de pregunta para evitar índices fuera de rango
-                      const questionsForAspect = categoryQuestions[currentAspect as keyof typeof categoryQuestions] || [];
-                      const rawIndex = currentAspectStatus?.currentQuestionIndex ?? 0;
-                      const clampedIndex = Math.min(Math.max(rawIndex, 0), Math.max(0, questionsForAspect.length - 1));
-                      const questionNum = questionsForAspect[clampedIndex];
-                      return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
-                    })
-                    .map((rec) => (
-                      <RecommendationDisplay
-                        key={rec.id}
-                        recommendation={rec}
-                        categoryKey={currentAspect}
-                      />
-                    ))}
-                </>
+                  ).map((rec) => (
+                    <div key={rec.id} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white rounded-md">
+                      <h3 className="font-semibold text-base sm:text-lg">{rec.title}</h3>
+                      <p className="mt-2 text-gray-700 text-sm sm:text-base">{rec.description}</p>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-3 rounded relative mb-4">
-                  <p className="text-sm sm:text-base">
-                    {(() => {
-                      if (!userTestAnswers) return "Cargando...";
-                      const progress = calculateRealProgress(currentAspect);
-                      if (progress.totalQuestionsWithRecommendations === 0) {
-                        return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
-                      }
-                      return "¡Has completado todas las actividades para esta categoría!";
-                    })()}
-                  </p>
+                /* Para nivel BAJO, mostrar el sistema completo de actividades */
+                <div>
+                  {(() => {
+                    if (!userTestAnswers) return false;
+                    const progress = calculateRealProgress(currentAspect);
+                    return progress.completedQuestionsWithRecommendations < progress.totalQuestionsWithRecommendations;
+                  })() ? (
+                    <>
+                      {userTestAnswers && getRecommendationsForCategory(
+                        currentAspect,
+                        currentAspectData.level,
+                        userTestAnswers
+                      )
+                        .filter((rec) => {
+                          // Clampear el índice antes de obtener el número de pregunta para evitar índices fuera de rango
+                          const questionsForAspect = categoryQuestions[currentAspect as keyof typeof categoryQuestions] || [];
+                          const rawIndex = currentAspectStatus?.currentQuestionIndex ?? 0;
+                          const clampedIndex = Math.min(Math.max(rawIndex, 0), Math.max(0, questionsForAspect.length - 1));
+                          const questionNum = questionsForAspect[clampedIndex];
+                          return rec.relatedQuestion === questionNum || !rec.relatedQuestion;
+                        })
+                        .map((rec) => (
+                          <RecommendationDisplay
+                            key={rec.id}
+                            recommendation={rec}
+                            categoryKey={currentAspect}
+                          />
+                        ))}
+                    </>
+                  ) : (
+                    <div className="bg-green-100 border border-green-400 text-green-700 px-3 sm:px-4 py-3 rounded relative mb-4">
+                      <p className="text-sm sm:text-base">
+                        {(() => {
+                          if (!userTestAnswers) return "Cargando...";
+                          const progress = calculateRealProgress(currentAspect);
+                          if (progress.totalQuestionsWithRecommendations === 0) {
+                            return "¡Excelente! Todas tus respuestas en esta categoría fueron correctas.";
+                          }
+                          return "¡Has completado todas las actividades para esta categoría!";
+                        })()}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Navegación entre aspectos */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
-        <button
-          onClick={handlePrevAspect}
-          disabled={currentAspectIndex === 0}
-          className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
-            currentAspectIndex === 0
-              ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
-        >
-          Anterior Aspecto
-        </button>
+          {/* Navegación entre aspectos */}
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 space-y-3 sm:space-y-0">
+            <button
+              onClick={handlePrevAspect}
+              disabled={currentAspectIndex === 0}
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+                currentAspectIndex === 0
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              Anterior Aspecto
+            </button>
 
-        <div className="text-center text-white text-xs sm:text-sm">
-          {isCurrentAspectCompleted() ? (
-            <div className="mb-2">
-              <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
+            <div className="text-center text-white text-xs sm:text-sm">
+              {isCurrentAspectCompleted() ? (
+                <div className="mb-2">
+                  <span className="text-green-400">✓ Aspecto completado - Puedes continuar</span>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-        </div>
 
-        <button
-          onClick={handleNextAspect}
-          disabled={currentAspectIndex === aspectCategories.length - 1}
-          className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
-            currentAspectIndex === aspectCategories.length - 1
-              ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-              : "bg-green-600 text-white hover:bg-green-700"
-          }`}
-        >
-          Siguiente Aspecto
-        </button>
-      </div>
+            <button
+              onClick={handleNextAspect}
+              disabled={currentAspectIndex === aspectCategories.length - 1}
+              className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+                currentAspectIndex === aspectCategories.length - 1
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
+            >
+              Siguiente Aspecto
+            </button>
+          </div>
 
-      {/* Botón para repetir el test cuando todos los aspectos estén completados */}
-      {areAllAspectsCompleted() && hasRetakenTest === false && (
-        <div className="mt-6 sm:mt-8 text-center">
-          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
-            ¡Felicitaciones! Has completado todas las actividades
-          </h3>
-          <button
-            onClick={handleResetTest}
-            className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
-          >
-            Realizar Test Otra Vez
-          </button>
-        </div>
+          {/* Botón para repetir el test cuando todos los aspectos estén completados */}
+          {areAllAspectsCompleted() && hasRetakenTest === false && (
+            <div className="mt-6 sm:mt-8 text-center">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
+                ¡Felicitaciones! Has completado todas las actividades
+              </h3>
+              <button
+                onClick={handleResetTest}
+                className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
+              >
+                Realizar Test Otra Vez
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {showFeedbackModal && currentFeedbackRec && (
