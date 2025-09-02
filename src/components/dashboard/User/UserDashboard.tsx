@@ -89,12 +89,18 @@ const UserDashboard = () => {
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
       <h1 className="text-center text-2xl font-bold mb-4">
-        Test de Autoestima General (TAG)
+        Programa de evaluación y orientación de la autoestima
       </h1>
 
       <div className="mb-4 text-center">
         <h2 className="text-lg font-semibold">AUTOR:</h2>
-        <p>Dr. Alex Grajeda Montalvo</p>
+        <p>Alex Grajeda Montalvo</p>
+        <p>Arteaga Torres Ashley Yazbel</p>
+        <p>Aynaya Camayo Eliane Ruth</p>
+        <p>Salvador Vega Joao Sebastian</p>
+        <p>Sosa Lupuche Carlos Manuel</p>
+        <p>Tafur Arzapalo Aragon Josue</p>
+        
       </div>
 
       {canTakeTest ? (
