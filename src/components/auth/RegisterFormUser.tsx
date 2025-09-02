@@ -116,8 +116,24 @@ export default function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
+    // Validación manual de todos los campos obligatorios
+    const camposIncompletos =
+      !personalInfo.nombres ||
+      !personalInfo.apellidos ||
+      !personalInfo.edad ||
+      !personalInfo.sexo ||
+      !personalInfo.universidad ||
+      !personalInfo.carrera ||
+      !personalInfo.ciclo ||
+      !personalInfo.departamento;
+
+    if (camposIncompletos) {
+      setError("Por favor rellene y seleccione todos los campos antes de continuar");
+      return;
+    }
+
+    setLoading(true);
     try {
       // Registrar usuario y esperar a que complete
       await registerUser(email, password, "6BM5IWJH", personalInfo);
@@ -313,7 +329,7 @@ export default function RegisterForm() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     required
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="" disabled hidden>Seleccionar</option>
                     <option value="Varón">Varón</option>
                     <option value="Mujer">Mujer</option>
                   </select>
@@ -389,7 +405,7 @@ export default function RegisterForm() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   required
                 >
-                  <option value="">Seleccionar departamento</option>
+                  <option value="" disabled hidden>Seleccionar departamento</option>
                   {departamentos.map((d) => (
                     <option key={d} value={d}>
                       {d}
