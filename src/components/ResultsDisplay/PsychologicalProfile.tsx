@@ -18,6 +18,7 @@ interface Props {
   socialX: number;
   academicoX: number;
   fisicoY: number;
+  generalLevel: "ALTO" | "MEDIO" | "BAJO" | null;
 }
 
 const PsychologicalProfile: React.FC<Props> = ({
@@ -27,12 +28,26 @@ const PsychologicalProfile: React.FC<Props> = ({
   socialX,
   academicoX,
   fisicoY,
+  generalLevel,
 }) => {
+  const generalInterpretation = generalLevel === "ALTO"
+    ? "En relación a los resultados, usted evidenció tener un autoestima de nivel alto, lo cual destaca el sentimiento de importancia y respeto por sí misma, además de la confianza en sus capacidades y habilidades, la disposición a decidir por sí solo. Esto no quiere decir que se sienta superior a los demás si no que reconoce sus propias limitaciones y debilidades, y, trata de superarlas. Los obstáculos que se le presentan los toma como un reto a los cuales debe enfrentar y superar. Por otro lado, se considera mayor facilidad para expresar espontáneamente sus sentimientos y aceptar la expresión de sentimientos de las demás personas, respetando así no sólo características físicas y de género en los demás sino también expresiones y comportamientos diferenciales."
+    : generalLevel === "MEDIO"
+    ? "En relación a los resultados, usted evidenció tener un autoestima de nivel medio, lo cual indica que mantiene regularidad en la valoración de sus propias características sin sobrevalorar sus  capacidades y expresando sus sentimientos de acuerdo a los contextos en los que interactúa. Tiene altibajos en la evaluación y expresión de sus aptitudes y afectos."
+    : generalLevel === "BAJO"
+    ? "En relación a los resultados, usted evidenció tener un nivel de autoestima bajo; lo cual indica que su autoestima se caracteriza por insatisfacción, rechazo y desprecio de sí mismo. Se destaca la falta de respeto hacia uno mismo, un autorretrato desagradable y el deseo de ser distinto; además de pensar no valer nada y sentir que lo peor le puede pasar. Además, se considera la preferencia por el aislamiento, el hecho de despreciar a los demás y sentir desconfianza. "
+    : "";
+
   return (
     <>
       {/* Tabla de resultados */}
       <div className="mb-6 sm:mb-8 bg-celeste p-4 sm:p-6 rounded-lg shadow-lg w-full">
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Perfil Psicológico</h2>
+        {generalLevel && (
+          <div className="mb-4 p-3 sm:p-4 bg-white rounded-md border border-gray-300">
+            <p className="text-sm sm:text-base font-medium text-gray-800">{generalInterpretation}</p>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border-2 border-black text-xs sm:text-sm">
             <thead>
@@ -103,37 +118,69 @@ const PsychologicalProfile: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Dispersigrama */}
+      {/* Dispersigrama -> reemplazado por Gráfico de Barras */}
       <div className="bg-celeste p-4 sm:p-6 rounded-lg shadow-lg w-full">
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Dispersigrama de Resultados</h2>
+        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Gráfico de Barras de Resultados</h2>
 
         <div className="w-full flex justify-center">
           <div className="w-full max-w-lg sm:max-w-xl">
-            <svg viewBox="0 0 600 500" className="w-full h-auto border rounded-lg bg-white p-2 sm:p-4">
-              <line x1="300" y1="50" x2="300" y2="450" stroke="#ccc" strokeWidth="1" />
-              <line x1="100" y1="250" x2="500" y2="250" stroke="#ccc" strokeWidth="1" />
+            {/* Gráfico de barras simple en SVG */}
+            <svg viewBox="0 0 600 320" className="w-full h-auto border rounded-lg bg-white p-2 sm:p-4">
+              {(() => {
+                const padding = { top: 20, right: 20, bottom: 60, left: 40 };
+                const width = 600 - padding.left - padding.right;
+                const height = 320 - padding.top - padding.bottom;
+                const scores = [
+                  { key: 'Personal', score: results.personal.score, level: results.personal.level },
+                  { key: 'Social', score: results.social.score, level: results.social.level },
+                  { key: 'Académico', score: results.academico.score, level: results.academico.level },
+                  { key: 'Físico', score: results.fisico.score, level: results.fisico.level },
+                ];
+                const maxScore = 6;
+                const barCount = scores.length;
+                const gap = 20;
+                const barWidth = (width - gap * (barCount + 1)) / barCount;
 
-              <text x="300" y="40" textAnchor="middle" fontWeight="bold" fontSize="12">PERSONAL</text>
-              <text x="300" y="470" textAnchor="middle" fontWeight="bold" fontSize="12">FÍSICO</text>
-              <text x="80" y="250" textAnchor="middle" fontWeight="bold" fontSize="12">SOCIAL</text>
-              <text x="520" y="250" textAnchor="middle" fontWeight="bold" fontSize="12">ACADÉMICO</text>
+                return (
+                  <>
+                    {/* Eje Y labels */}
+                    {[0, 1, 2, 3, 4, 5, 6].map((tick) => {
+                      const y = padding.top + height - (tick / maxScore) * height;
+                      return (
+                        <g key={tick}>
+                          <line x1={padding.left} x2={padding.left + width} y1={y} y2={y} stroke="#eee" strokeWidth={1} />
+                          <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize="10" fill="#333">{tick}</text>
+                        </g>
+                      );
+                    })}
 
-              <circle cx="300" cy={personalY} r="8" fill={getColor(results.personal.level)} />
-              <circle cx={academicoX} cy="250" r="8" fill={getColor(results.academico.level)} />
-              <circle cx={socialX} cy="250" r="8" fill={getColor(results.social.level)} />
-              <circle cx="300" cy={fisicoY} r="8" fill={getColor(results.fisico.level)} />
-
-              <polygon
-                points={`300,${personalY} ${academicoX},250 300,${fisicoY} ${socialX},250`}
-                fill="rgba(74, 111, 165, 0.2)"
-                stroke="#4a6fa5"
-                strokeWidth="2"
-              />
-
-              <text x="300" y={personalY - 15} textAnchor="middle" fontSize="12">{results.personal.score}</text>
-              <text x={academicoX + 15} y="250" textAnchor="middle" fontSize="12">{results.academico.score}</text>
-              <text x={socialX - 15} y="250" textAnchor="middle" fontSize="12">{results.social.score}</text>
-              <text x="300" y={fisicoY + 15} textAnchor="middle" fontSize="12">{results.fisico.score}</text>
+                    {/* Barras */}
+                    {scores.map((s, i) => {
+                      const x = padding.left + gap + i * (barWidth + gap);
+                      const barHeight = (s.score / maxScore) * height;
+                      const y = padding.top + height - barHeight;
+                      return (
+                        <g key={s.key}>
+                          <rect
+                            x={x}
+                            y={y}
+                            width={barWidth}
+                            height={barHeight}
+                            fill={getColor(s.level)}
+                            rx={6}
+                          />
+                          <text x={x + barWidth / 2} y={y - 8} textAnchor="middle" fontSize="12" fill="#111" fontWeight="600">
+                            {s.score}/6
+                          </text>
+                          <text x={x + barWidth / 2} y={padding.top + height + 20} textAnchor="middle" fontSize="12" fill="#111">
+                            {s.key}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </svg>
           </div>
         </div>
@@ -145,21 +192,17 @@ const PsychologicalProfile: React.FC<Props> = ({
         </div>
 
         <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-white rounded-lg border border-gray-200">
-          <p className="font-medium text-blue-800 text-sm sm:text-base">Interpretación del Dispersigrama:</p>
+          <p className="font-medium text-blue-800 text-sm sm:text-base">Interpretación del Gráfico de Barras:</p>
           <p className="mt-2 text-xs sm:text-sm">
-            El gráfico muestra los niveles de autoestima en los cuatro aspectos evaluados.
-            Cuanto más cerca está el punto del centro, mayor es la puntuación obtenida.
-            {results.personal.level === 'ALTO' && results.academico.level === 'ALTO' &&
-              ' Las fortalezas se observan principalmente en los aspectos personal y académico.'}
-            {results.social.level === 'ALTO' && results.fisico.level === 'ALTO' &&
-              ' Las fortalezas se observan principalmente en los aspectos social y físico.'}
+            El gráfico muestra las puntuaciones (0-6) en los cuatro aspectos evaluados.
+            Cada barra representa la puntuación y el color indica el nivel (Alto/Medio/Bajo).
             {results.personal.level === 'BAJO' && ' El aspecto personal muestra oportunidades de mejora.'}
             {results.social.level === 'BAJO' && ' El aspecto social muestra oportunidades de mejora.'}
             {results.academico.level === 'BAJO' && ' El aspecto académico muestra oportunidades de mejora.'}
             {results.fisico.level === 'BAJO' && ' El aspecto físico muestra oportunidades de mejora.'}
           </p>
           <p className="mt-2 text-xs sm:text-sm">
-            La forma del polígono resultante indica un perfil de autoestima
+            La diferencia entre la puntuación más alta y la más baja indica si el perfil es equilibrado o desigual:
             {Math.max(
               results.personal.score,
               results.social.score,

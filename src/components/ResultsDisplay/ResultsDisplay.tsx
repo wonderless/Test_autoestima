@@ -755,11 +755,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     return (
       <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 mb-4 sm:mb-6">
         <h3 className="text-lg sm:text-xl font-bold mb-2">{recommendation.title}</h3>
-        {recommendation.questionAsked && (
-                  <p className="text-xs sm:text-sm text-gray-600 mb-2">
-          Pregunta: &quot;{recommendation.questionAsked}&quot; - Tu respuesta: {recommendation.questionAnsweredIncorrectly ? "SÍ" : "NO"}
-        </p>
-        )}
         <p className="text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">{recommendation.description}</p>
         
         {recommendation.days && (
@@ -1305,10 +1300,11 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         socialX={calculatePointCoordinate(results.social.score, 300, -1)}
         academicoX={calculatePointCoordinate(results.academico.score, 300, 1)}
         fisicoY={calculatePointCoordinate(results.fisico.score, 250, 1)}
+        generalLevel={generalLevel}
       />
 
       <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
-        Sistema de Actividades Personalizadas
+        Orientaciones y recomendaciones a seguir
       </h1>
 
       {/* Indicador de progreso de aspectos */}
