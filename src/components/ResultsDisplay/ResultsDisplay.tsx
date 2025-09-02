@@ -166,6 +166,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [currentFeedbackRec, setCurrentFeedbackRec] =
     useState<RecommendationItem | null>(null);
+  const [hasRetakenTest, setHasRetakenTest] = useState(false);
   const [feedbackAnswers, setFeedbackAnswers] = useState<
     Record<string, boolean>
   >({});
@@ -779,28 +780,28 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       const userRef = doc(db, "users", userId);
 
       const testResults = {
-        testResults: {
-          personal: {
-            score: resultsData.personal.score,
-            level: resultsData.personal.level,
-          },
-          social: {
-            score: resultsData.social.score,
-            level: resultsData.social.level,
-          },
-          academico: {
-            score: resultsData.academico.score,
-            level: resultsData.academico.level,
-          },
-          fisico: {
-            score: resultsData.fisico.score,
-            level: resultsData.fisico.level,
-          },
+        personal: {
+          score: resultsData.personal.score,
+          level: resultsData.personal.level,
         },
-        answers: answers,
+        social: {
+          score: resultsData.social.score,
+          level: resultsData.social.level,
+        },
+        academico: {
+          score: resultsData.academico.score,
+          level: resultsData.academico.level,
+        },
+        fisico: {
+          score: resultsData.fisico.score,
+          level: resultsData.fisico.level,
+        },
       };
 
-      await updateDoc(userRef, testResults);
+      await updateDoc(userRef, {
+        testResults,
+        answers
+      });
     } catch (err) {
       console.error("Error saving results:", err);
       setError(
@@ -989,6 +990,23 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     fetchAndProcessResults();
   }, [userId, saveResultsToFirebase, startTimer, getRecommendationsForCategory]);
 
+  // Efecto independiente para asegurar sincronización de hasRetakenTest con Firebase
+  useEffect(() => {
+    const fetchHasRetakenTest = async () => {
+      try {
+        const db = getFirestore();
+        const userDoc = await getDoc(doc(db, "users", userId));
+        const userData = userDoc.data();
+        if (userData) {
+          setHasRetakenTest(userData.hasRetakenTest ?? false);
+        }
+      } catch (err) {
+        console.error("Error fetching hasRetakenTest:", err);
+      }
+    };
+    fetchHasRetakenTest();
+  }, [userId]);
+
   // Funciones optimizadas con useCallback y useMemo
   const getLevelClass = useCallback((level: string): string => {
     if (level === "ALTO") return "bg-green-100 text-green-800";
@@ -1076,6 +1094,8 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         veracityScore: 0,
         lastTestDate: null,
       });
+      await updateDoc(userRef, { hasRetakenTest: true });
+      setHasRetakenTest(true);
       router.push("/test");
     } catch (error) {
       console.error("Error resetting test:", error);
@@ -1252,14 +1272,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                   intentar el test nuevamente?
                 </p>
               </div>
-              <div className="mt-4">
-                <button
-                  onClick={handleResetTest}
-                  className="w-full sm:w-auto bg-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm sm:text-base"
-                >
-                  Realizar Test Nuevamente
-                </button>
-              </div>
+              {/* Eliminado el botón duplicado "Realizar Test Nuevamente" */}
             </div>
           </div>
         </div>
@@ -1453,7 +1466,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       </div>
 
       {/* Botón para repetir el test cuando todos los aspectos estén completados */}
-      {areAllAspectsCompleted() && (
+      {areAllAspectsCompleted() && hasRetakenTest === false && (
         <div className="mt-6 sm:mt-8 text-center">
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
             ¡Felicitaciones! Has completado todas las actividades

@@ -62,26 +62,40 @@ const PsychologicalProfile: React.FC<Props> = ({
               {['personal', 'social', 'academico', 'fisico'].map((key) => {
                 const result = results[key as keyof typeof results];
                 const interpretationMap = {
-                  personal: {
-                    ALTO: 'Buena percepción de sí mismo y confianza en sus capacidades personales.',
-                    MEDIO: 'Percepción adecuada de sí mismo con áreas por reforzar.',
-                    BAJO: 'Puede mejorar en la confianza y valoración de sí mismo.',
+
+
+
+
+
+personal: {
+                    ALTO: 'Felicidades, usted tiene una buena percepción sobre su carácter, valores y persona; además de tener confianza en sus capacidades personales.',
+                    MEDIO: 'Usted tiene una percepción adecuada de sí mismo, sin sobrevalorar sus características particulares, pero con algunas áreas para reforzar.',
+                    BAJO: 'Usted evidenció una inadecuada valoración sobre sus características y valores personales y dificultades en la confianza sobre sus capacidades. Se sugiere que realice con urgencia las siguientes actividades para empezar a mejorar la percepción sobre sus características de personalidad.'
                   },
                   social: {
-                    ALTO: 'Facilidad para interactuar socialmente y establecer relaciones saludables.',
-                    MEDIO: 'Relativa facilidad para interactuar socialmente, con aspectos por mejorar.',
-                    BAJO: 'Puede fortalecer sus habilidades de interacción social.',
+                    ALTO: 'Felicidades, usted evidenció tener capacidad para interactuar de forma adecuada y establecer relaciones saludables.',
+                    MEDIO: 'Usted evidenció tener una valoración oportuna sobre sus capacidades de interacción; además de presentar cierta facilidad para interactuar socialmente; no obstante, existen algunos aspectos para trabajar.',
+                    BAJO: 'Usted evidenció tener marcadas deficiencias para la interacción social y el desarrollo de relaciones saludables.  Resulta urgente que continúe con las actividades planteadas para evidenciar mejoras en el ámbito de interacción social',
                   },
                   academico: {
-                    ALTO: 'Confianza elevada en sus capacidades de aprendizaje y desempeño académico.',
-                    MEDIO: 'Adecuada valoración de sus capacidades académicas.',
-                    BAJO: 'Puede aumentar la confianza en sus habilidades académicas.',
+                    ALTO: 'Felicidades, usted presentó una elevada confianza en sus capacidades de aprendizaje y desempeño académico.',
+                    MEDIO: 'Usted presenta una adecuada valoración de sus capacidades académicas y de aprendizaje, aunque existen oportunidades de mejora que se pueden abordar.',
+                    BAJO: 'Usted evidenció tener una inadecuada percepción sobre sus aptitudes académicas, además de presentar desconfianza en su capacidad para aprender y abordar situaciones relacionadas a los estudios. Se requiere continuar con el programa para evidenciar mejoras en su valoración académica.',
                   },
                   fisico: {
-                    ALTO: 'Buena aceptación y valoración de su imagen corporal y capacidades físicas.',
-                    MEDIO: 'Aceptación moderada de su imagen y capacidades físicas.',
-                    BAJO: 'Puede mejorar la aceptación de su imagen corporal.',
-                  },
+                    ALTO: 'Usted presentó una excelente aceptación y valoración de su imagen corporal y características físicas, felicidades.',
+                    MEDIO: 'Usted evidenció una valoración saludable de su imagen y capacidades físicas; aunque existen puntos de optimización para mejorar la percepción sobre sí mismo.',
+                    BAJO: 'Usted manifestó tener deficiencias marcadas en la valoración de sus características físicas; por lo cual se requiere con urgencia seguir con el programa de actividades para empezar a trabajar sobre la aceptación de su imagen corporal.',
+    },
+
+
+
+
+
+
+
+
+
                 } as const;
 
                 const interpretations: string =
