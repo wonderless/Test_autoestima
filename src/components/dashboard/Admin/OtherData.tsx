@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 interface UserTestData {
   email: string;
   testDuration?: number;
+  testDuration2?: number;
   personalInfo: {
     edad: number;
     departamento: string;
@@ -21,6 +22,7 @@ interface UserTestData {
     ciclo: string;
   };
   answers: Record<number, boolean>;
+  answers2?: Record<number, boolean>;
   invitationCode: string;
   testResults?: {
     academico?: { score: number; level: string };
@@ -28,7 +30,15 @@ interface UserTestData {
     personal?: { score: number; level: string };
     social?: { score: number; level: string };
   };
+  testResults2?: {
+    academico?: { score: number; level: string };
+    fisico?: { score: number; level: string };
+    personal?: { score: number; level: string };
+    social?: { score: number; level: string };
+  };
   veracityScore?: number;
+  veracityScore2?: number;
+  hasRetakenTest?: boolean;
 }
 
 export default function OtherData() {
@@ -78,6 +88,7 @@ export default function OtherData() {
 
         usersSnapshot.forEach((doc) => {
           const userData = doc.data() as UserTestData;
+          // Incluir usuarios que tengan al menos el primer intento
           if (userData.answers && userData.invitationCode === currentAdminCode) {
             usersData.push(userData);
           }
@@ -105,11 +116,22 @@ export default function OtherData() {
           return answer ? 'Sí' : 'No';
         });
 
+        const answers2Array = Array.from({ length: 30 }, (_, i) => {
+          const answer = user.answers2?.[i + 1];
+          return answer !== undefined ? (answer ? 'Sí' : 'No') : 'N/A';
+        });
+
         const autoestima =
           (user.testResults?.academico?.score || 0) +
           (user.testResults?.fisico?.score || 0) +
           (user.testResults?.personal?.score || 0) +
           (user.testResults?.social?.score || 0);
+
+        const autoestima2 = user.testResults2 ?
+          (user.testResults2?.academico?.score || 0) +
+          (user.testResults2?.fisico?.score || 0) +
+          (user.testResults2?.personal?.score || 0) +
+          (user.testResults2?.social?.score || 0) : 'N/A';
 
         return {
           'N°': index + 1,
@@ -128,13 +150,24 @@ export default function OtherData() {
             ...acc,
             [`P${i + 1}`]: curr
           }), {}),
-          // Nuevas columnas añadidas
+          // Columnas del primer intento
           'Personal': user.testResults?.personal?.score ?? 'N/A',
           'Social': user.testResults?.social?.score ?? 'N/A',
           'Académico': user.testResults?.academico?.score ?? 'N/A',
           'Físico': user.testResults?.fisico?.score ?? 'N/A',
           'Veracidad': user.veracityScore ?? 'N/A',
-          'Autoestima': autoestima
+          'Autoestima': autoestima,
+          // Columnas del segundo intento
+          ...answers2Array.reduce((acc, curr, i) => ({
+            ...acc,
+            [`P${i + 1} S`]: curr
+          }), {}),
+          'Personal S': user.testResults2?.personal?.score ?? 'N/A',
+          'Social S': user.testResults2?.social?.score ?? 'N/A',
+          'Académico S': user.testResults2?.academico?.score ?? 'N/A',
+          'Físico S': user.testResults2?.fisico?.score ?? 'N/A',
+          'Veracidad S': user.veracityScore2 ?? 'N/A',
+          'Autoestima S': autoestima2
         };
       });
 
@@ -154,13 +187,21 @@ export default function OtherData() {
         'Ciclo': 10,
         'Tiempo': 15,
         ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1}`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
-        // Anchos para las nuevas columnas
+        // Anchos para las columnas del primer intento
         'Personal': 10,
         'Social': 10,
         'Académico': 12,
         'Físico': 10,
         'Veracidad': 10,
-        'Autoestima': 12
+        'Autoestima': 12,
+        // Anchos para las columnas del segundo intento
+        ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1} S`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
+        'Personal S': 10,
+        'Social S': 10,
+        'Académico S': 12,
+        'Físico S': 10,
+        'Veracidad S': 10,
+        'Autoestima S': 12
       };
 
       ws['!cols'] = Object.values(colWidths).map(width => ({ width }));
@@ -231,6 +272,18 @@ export default function OtherData() {
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Físico</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Veracidad</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Autoestima</th>
+              {/* Columnas del segundo intento */}
+              {Array.from({ length: 30 }, (_, i) => (
+                <th key={`2-${i}`} className="px-4 py-3 text-left text-xs font-medium text-white uppercase">
+                  P{i + 1} S
+                </th>
+              ))}
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Personal S</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Social S</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Académico S</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Físico S</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Veracidad S</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Autoestima S</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -265,6 +318,24 @@ export default function OtherData() {
                      (user.testResults?.fisico?.score || 0) +
                      (user.testResults?.personal?.score || 0) +
                      (user.testResults?.social?.score || 0) )}
+                </td>
+                {/* Datos del segundo intento */}
+                {Array.from({ length: 30 }, (_, i) => (
+                  <td key={`2-${i}`} className="px-4 py-3 whitespace-nowrap">
+                    {user.answers2 ? (user.answers2[i + 1] ? 'Sí' : 'No') : 'N/A'}
+                  </td>
+                ))}
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.personal?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.social?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.academico?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.fisico?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore2 ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {user.testResults2 ? 
+                    ((user.testResults2?.academico?.score || 0) +
+                     (user.testResults2?.fisico?.score || 0) +
+                     (user.testResults2?.personal?.score || 0) +
+                     (user.testResults2?.social?.score || 0)) : 'N/A'}
                 </td>
               </tr>
             ))}
