@@ -18,7 +18,7 @@ export const questions: Question[] = [
   { id: 12, text: "¿Tengo un buen estado de salud?" }, // fisico
   { id: 13, text: "¿Me parece que soy veloz para hacer mis quehaceres?" }, //personal
   { id: 14, text: "Casi siempre soluciono los problemas académicos que enfrento." }, //academico
-  { id: 15, text: "No soy bueno para llegar a tiempo a la escuela." }, //academico
+  { id: 15, text: "No soy bueno para llegar a tiempo a clases." }, //academico
   { id: 16, text: "Soy un buen alumno en clase." }, //academico
   { id: 17, text: "Se me hace difícil hacer amistad con otros(as) de mi edad" },//social
   { id: 18, text: "¿No estoy conforme con mi altura?" }, //fisico

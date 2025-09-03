@@ -28,6 +28,10 @@ interface Props {
   userInfo: any;
 }
 
+// Tiempo de desbloqueo para pasar al siguiente día de actividades
+// Definido en segundos: 12 horas = 12 * 60 * 60 = 43200 segundos
+const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
+
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
   social: [2, 4, 17, 23, 27, 29],
@@ -82,26 +86,12 @@ const determineGeneralLevel = (
   return "BAJO";
 };
 
-// Función para formatear el tiempo restante
+// Función para formatear el tiempo restante (mostrar SIEMPRE la fecha y hora exacta)
 const formatTimeRemaining = (seconds: number, countdownStartTime?: number): string => {
   if (seconds <= 0) return "Tiempo completado";
-  
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  
-  if (hours > 0) {
-    return `Falta ${hours} hora${hours > 1 ? 's' : ''}`;
-  } else if (minutes >= 10) {
-    return `Faltan ${minutes} minutos`;
-  } else {
-    // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
-    if (countdownStartTime) {
-      // Calcular el tiempo de desbloqueo basado en el tiempo inicial, no en el tiempo restante actual
-      const unlockTime = new Date(countdownStartTime + (10 * 1000)); // 10 segundos
-      return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
-    }
-    return "Falta menos de 10 minutos";
-  }
+  if (!countdownStartTime) return "Calculando hora de desbloqueo...";
+  const unlockTime = new Date(countdownStartTime + (UNLOCK_DELAY_SECONDS * 1000));
+  return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
 };
 
 // Componente optimizado para mostrar el countdown sin re-renderizar el resto
@@ -109,12 +99,12 @@ const CountdownDisplay = memo<{
   countdownStartTime: number;
   onComplete: () => void;
 }>(({ countdownStartTime, onComplete }) => {
-  const [timeRemaining, setTimeRemaining] = useState(10); // 10 segundos
+  const [timeRemaining, setTimeRemaining] = useState(UNLOCK_DELAY_SECONDS);
   
   useEffect(() => {
     const timer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - countdownStartTime) / 1000);
-      const remaining = Math.max(0, 10 - elapsed);
+      const remaining = Math.max(0, UNLOCK_DELAY_SECONDS - elapsed);
       
       if (remaining <= 0) {
         clearInterval(timer);
@@ -129,23 +119,12 @@ const CountdownDisplay = memo<{
   }, [countdownStartTime, onComplete]);
   
   if (timeRemaining <= 0) return null;
-  
-  const hours = Math.floor(timeRemaining / 3600);
-  const minutes = Math.floor((timeRemaining % 3600) / 60);
-  
-  if (hours > 0) {
-    return <span>Falta {hours} hora{hours > 1 ? 's' : ''}</span>;
-  } else if (minutes >= 10) {
-    return <span>Faltan {minutes} minutos</span>;
-  } else {
-    // Cuando faltan menos de 10 minutos, mostrar la fecha y hora exacta
-    const unlockTime = new Date(countdownStartTime + (10 * 1000)); // 10 segundos
-    return (
-      <span>
-        Se desbloqueará la actividad a las {unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del {unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-      </span>
-    );
-  }
+  const unlockTime = new Date(countdownStartTime + (UNLOCK_DELAY_SECONDS * 1000));
+  return (
+    <span>
+      Se desbloqueará la actividad a las {unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del {unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+    </span>
+  );
 });
 CountdownDisplay.displayName = 'CountdownDisplay';
 
@@ -190,7 +169,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             const progress = categoryData.recommendationProgress[recommendationId];
             if (progress?.countdownStartTime) {
               const elapsed = Math.floor((Date.now() - progress.countdownStartTime) / 1000);
-              const remaining = Math.max(0, 10 - elapsed); // 10 segundos
+              const remaining = Math.max(0, UNLOCK_DELAY_SECONDS - elapsed);
               
               if (remaining <= 0) {
                 // El temporizador expiró, desbloquear el siguiente día
@@ -248,7 +227,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, []);
 
   // Función para iniciar un temporizador - optimizada con useCallback
-  const startTimer = useCallback((category: string, recommendationId: string, duration: number = 10) => {
+  const startTimer = useCallback((category: string, recommendationId: string, duration: number = UNLOCK_DELAY_SECONDS) => {
     const timerKey = `${category}-${recommendationId}`;
     
     // Limpiar temporizador existente si lo hay
@@ -378,7 +357,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         }
       } else {
         // Iniciar temporizador para el siguiente día
-        startTimer(category, recommendationId, 10); // 10 segundos
+        startTimer(category, recommendationId, UNLOCK_DELAY_SECONDS);
       }
     } else {
       // Avanzar a la siguiente actividad del mismo día
@@ -407,7 +386,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           currentActivityIndex: isLastActivityOfDay ? 0 : nextActivityIndex,
           completedActivities: [...(currentProgress.completedActivities || []), currentProgress.currentActivityIndex],
           isCompleted: isLastDay,
-          countdown: isLastActivityOfDay && !isLastDay ? 10 : null,
+          countdown: isLastActivityOfDay && !isLastDay ? UNLOCK_DELAY_SECONDS : null,
           countdownStartTime: isLastActivityOfDay && !isLastDay ? Date.now() : null
         }
       });
@@ -964,10 +943,10 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             // Reiniciar temporizadores si hay countdown activo
             if (savedRecData?.countdownStartTime) {
               const elapsed = Math.floor((Date.now() - savedRecData.countdownStartTime) / 1000);
-              const remaining = Math.max(0, 10 - elapsed); // 10 segundos
+              const remaining = Math.max(0, UNLOCK_DELAY_SECONDS - elapsed);
               
               if (remaining > 0) {
-                startTimer(category, rec.id, 10); // Siempre usar 10 segundos
+                startTimer(category, rec.id, UNLOCK_DELAY_SECONDS);
               } else {
                 // Si el tiempo ya expiró, desbloquear el siguiente día inmediatamente
                 categoryRecProgress[rec.id] = {
