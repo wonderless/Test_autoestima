@@ -1411,62 +1411,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-white">
         Resultados del Test de Autoestima
       </h1>
-
-      {/* Historial de intentos del test */}
-      {testAttempts > 1 && (
-        <div className="mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-0">
-              Historial de Intentos del Test
-            </h2>
-            <button
-              onClick={() => setShowPreviousResults(!showPreviousResults)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              {showPreviousResults ? 'Ocultar Historial' : 'Ver Historial'}
-            </button>
-          </div>
-          
-                     {showPreviousResults && (
-             <div className="space-y-3">
-               <div className="bg-white p-3 rounded-md border border-gray-200">
-                 <div className="flex justify-between items-center mb-2">
-                   <h3 className="font-semibold text-gray-800">
-                     Primer Intento
-                   </h3>
-                   <span className="text-sm text-gray-600">
-                     Datos preservados
-                   </span>
-                 </div>
-                 <div className="text-sm text-gray-600">
-                   <p>Datos preservados en: answers, testResults, recommendationProgress, etc.</p>
-                   <p className="mt-1 text-xs text-gray-500">
-                     Este fue tu primer intento del test de autoestima
-                   </p>
-                 </div>
-               </div>
-               {testAttempts > 1 && (
-                 <div className="bg-white p-3 rounded-md border border-gray-200">
-                   <div className="flex justify-between items-center mb-2">
-                     <h3 className="font-semibold text-gray-800">
-                       Segundo Intento
-                     </h3>
-                     <span className="text-sm text-gray-600">
-                       Datos preservados
-                     </span>
-                   </div>
-                   <div className="text-sm text-gray-600">
-                     <p>Datos preservados en: answers2, testResults2, recommendationProgress2, etc.</p>
-                     <p className="mt-1 text-xs text-gray-500">
-                       Este fue tu segundo intento del test de autoestima
-                     </p>
-                   </div>
-                 </div>
-               )}
-             </div>
-           )}
-        </div>
-      )}
+ 
 
       <div className="text-center text-base sm:text-lg font-bold mb-4 sm:mb-6 bg-celeste rounded-lg border border-gray-300 p-3 sm:p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
@@ -1650,17 +1595,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
                 ¡Felicitaciones! Has completado todas las actividades
               </h3>
-                             <div className="mb-4">
-                 <p className="text-white text-sm mb-2">
-                   Este será tu segundo y último intento del test
-                 </p>
-                 <p className="text-white text-xs opacity-80">
-                   Los resultados del primer intento se preservarán en "answers", "testResults", etc.
-                 </p>
-                 <p className="text-white text-xs opacity-80">
-                   Los nuevos resultados se guardarán en "answers2", "testResults2", etc.
-                 </p>
-               </div>
+
                              <button
                  onClick={() => {
                    console.log("Botón Realizar Test Otra Vez clickeado");
