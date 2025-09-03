@@ -171,6 +171,8 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     Record<string, boolean>
   >({});
   const [currentAspectIndex, setCurrentAspectIndex] = useState(0);
+  const [testAttempts, setTestAttempts] = useState<number>(1);
+  const [showPreviousResults, setShowPreviousResults] = useState(false);
 
   // Temporizadores activos
   const activeTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -772,8 +774,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   // Funciones optimizadas con useCallback
   const saveResultsToFirebase = useCallback(async (
-    resultsData: Results,
-    answers: Record<number, boolean>
+    resultsData: Results
   ) => {
     try {
       const db = getFirestore();
@@ -798,10 +799,26 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         },
       };
 
-      await updateDoc(userRef, {
-        testResults,
-        answers
-      });
+      // Verificar si es una retoma del test para determinar dónde guardar
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data();
+      const isRetake = userData?.hasRetakenTest === true;
+      
+      let updateData: any;
+      
+      if (isRetake) {
+        // Es el segundo intento - guardar solo testResults2, NO sobrescribir answers2
+        updateData = {
+          testResults2: testResults
+        };
+      } else {
+        // Es el primer intento - guardar solo testResults, NO sobrescribir answers
+        updateData = {
+          testResults
+        };
+      }
+      console.log("---------------------------2", updateData);
+      await updateDoc(userRef, updateData);
     } catch (err) {
       console.error("Error saving results:", err);
       setError(
@@ -859,14 +876,17 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         const userDoc = await getDoc(doc(db, "users", userId));
         const userData = userDoc.data();
 
-        if (!userData?.answers) {
+        // Verificar si es una retoma del test para usar las respuestas correctas
+        const isRetake = userData?.hasRetakenTest === true;
+        const answers = isRetake ? userData?.answers2 : userData?.answers;
+        
+        if (!answers) {
           setError("No se encontraron respuestas del test");
           return;
         }
 
-        const answers = userData.answers;
         setUserTestAnswers(answers);
-        const veracityScore = userData.veracityScore || 0;
+        const veracityScore = isRetake ? (userData?.veracityScore2 || 0) : (userData?.veracityScore || 0);
 
         if (veracityScore >= 3) {
           setIsVeracityValid(false);
@@ -904,7 +924,13 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         setGeneralLevel(calculatedGeneralLevel);
         setResults(calculatedResults);
 
-        await saveResultsToFirebase(calculatedResults, answers);
+        // Solo guardar resultados si no existen ya en Firebase
+        // Esto evita sobrescribir los datos que ya se guardaron en TestForm
+        const existingResults = isRetake ? userData?.testResults2 : userData?.testResults;
+        
+        if (!existingResults) {
+          await saveResultsToFirebase(calculatedResults);
+        }
 
         const savedRecommendationProgress =
           userData?.recommendationProgress || {};
@@ -999,6 +1025,13 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         const userData = userDoc.data();
         if (userData) {
           setHasRetakenTest(userData.hasRetakenTest ?? false);
+          
+          // Contar cuántos intentos del test ha realizado (máximo 2)
+          let attempts = 1;
+          if (userData?.hasRetakenTest === true) {
+            attempts = 2;
+          }
+          setTestAttempts(attempts);
         }
       } catch (err) {
         console.error("Error fetching hasRetakenTest:", err);
@@ -1083,22 +1116,61 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   const handleResetTest = useCallback(async () => {
     try {
+      console.log("Iniciando handleResetTest...");
+      
+      // Limpiar localStorage del test anterior
       localStorage.removeItem("testAnswers");
+      localStorage.removeItem("testStartTime");
+      
       const db = getFirestore();
       const userRef = doc(db, "users", userId);
+      
+      // Obtener el documento actual para verificar el estado
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const userData = userDoc.data();
+      
+      console.log("Estado actual del usuario:", userData);
+      console.log("hasRetakenTest antes de actualizar:", userData?.hasRetakenTest);
+      
+      // Solo permitir 2 intentos máximo
+      if (userData?.hasRetakenTest === true) {
+        alert("Ya has realizado el test 2 veces. No se permiten más intentos.");
+        return;
+      }
+      
+      console.log("Marcando hasRetakenTest como true...");
+      
+      // Marcar que es una retoma del test
       await updateDoc(userRef, {
-        answers: {},
-        recommendationProgress: {},
-        activityFeedback: {},
-        testDuration: 0,
-        veracityScore: 0,
-        lastTestDate: null,
+        hasRetakenTest: true
       });
-      await updateDoc(userRef, { hasRetakenTest: true });
+      
+      console.log("hasRetakenTest actualizado exitosamente");
+      
+      // Verificar que se actualizó correctamente
+      const updatedDoc = await getDoc(doc(db, "users", userId));
+      const updatedData = updatedDoc.data();
+      console.log("Estado después de actualizar:", updatedData);
+      console.log("hasRetakenTest después de actualizar:", updatedData?.hasRetakenTest);
+      
+      // Verificar que la actualización fue exitosa antes de navegar
+      if (updatedData?.hasRetakenTest !== true) {
+        console.error("Error: hasRetakenTest no se actualizó correctamente");
+        alert("Hubo un error al preparar el test. Por favor intenta nuevamente.");
+        return;
+      }
+      
+      // Actualizar el estado local
       setHasRetakenTest(true);
+      
+      console.log("Navegando a /test...");
+      
+      // Navegar al test
       router.push("/test");
+      
     } catch (error) {
       console.error("Error resetting test:", error);
+      // En caso de error, intentar navegar al test de todas formas
       router.push("/test");
     }
   }, [userId, router]);
@@ -1148,6 +1220,36 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const handleCloseFeedbackModal = useCallback(() => {
     setShowFeedbackModal(false);
   }, []);
+
+  // Función para obtener los resultados de un intento específico
+  const getAttemptResults = useCallback(async (attemptNumber: number) => {
+    try {
+      const db = getFirestore();
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const userData = userDoc.data();
+      
+      if (!userData) return null;
+      
+      const suffix = attemptNumber > 1 ? attemptNumber.toString() : '';
+      const answers = userData[`answers${suffix}`] || {};
+      const testResults = userData[`testResults${suffix}`] || {};
+      const testDuration = userData[`testDuration${suffix}`] || 0;
+      const veracityScore = userData[`veracityScore${suffix}`] || 0;
+      const lastTestDate = userData[`lastTestDate${suffix}`] || null;
+      
+      return {
+        attemptNumber,
+        answers,
+        testResults,
+        testDuration,
+        veracityScore,
+        lastTestDate
+      };
+    } catch (error) {
+      console.error("Error fetching attempt results:", error);
+      return null;
+    }
+  }, [userId]);
 
   // Array de aspectos en orden
   const aspectCategories = useMemo(() => ['personal', 'social', 'academico', 'fisico'], []);
@@ -1309,6 +1411,62 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-white">
         Resultados del Test de Autoestima
       </h1>
+
+      {/* Historial de intentos del test */}
+      {testAttempts > 1 && (
+        <div className="mb-6 bg-celeste rounded-lg border border-gray-300 p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-3">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-0">
+              Historial de Intentos del Test
+            </h2>
+            <button
+              onClick={() => setShowPreviousResults(!showPreviousResults)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              {showPreviousResults ? 'Ocultar Historial' : 'Ver Historial'}
+            </button>
+          </div>
+          
+                     {showPreviousResults && (
+             <div className="space-y-3">
+               <div className="bg-white p-3 rounded-md border border-gray-200">
+                 <div className="flex justify-between items-center mb-2">
+                   <h3 className="font-semibold text-gray-800">
+                     Primer Intento
+                   </h3>
+                   <span className="text-sm text-gray-600">
+                     Datos preservados
+                   </span>
+                 </div>
+                 <div className="text-sm text-gray-600">
+                   <p>Datos preservados en: answers, testResults, recommendationProgress, etc.</p>
+                   <p className="mt-1 text-xs text-gray-500">
+                     Este fue tu primer intento del test de autoestima
+                   </p>
+                 </div>
+               </div>
+               {testAttempts > 1 && (
+                 <div className="bg-white p-3 rounded-md border border-gray-200">
+                   <div className="flex justify-between items-center mb-2">
+                     <h3 className="font-semibold text-gray-800">
+                       Segundo Intento
+                     </h3>
+                     <span className="text-sm text-gray-600">
+                       Datos preservados
+                     </span>
+                   </div>
+                   <div className="text-sm text-gray-600">
+                     <p>Datos preservados en: answers2, testResults2, recommendationProgress2, etc.</p>
+                     <p className="mt-1 text-xs text-gray-500">
+                       Este fue tu segundo intento del test de autoestima
+                     </p>
+                   </div>
+                 </div>
+               )}
+             </div>
+           )}
+        </div>
+      )}
 
       <div className="text-center text-base sm:text-lg font-bold mb-4 sm:mb-6 bg-celeste rounded-lg border border-gray-300 p-3 sm:p-4 shadow-sm w-full">
         Nivel de Autoestima General&nbsp;&nbsp;&nbsp;&nbsp;
@@ -1492,12 +1650,26 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">
                 ¡Felicitaciones! Has completado todas las actividades
               </h3>
-              <button
-                onClick={handleResetTest}
-                className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
-              >
-                Realizar Test Otra Vez
-              </button>
+                             <div className="mb-4">
+                 <p className="text-white text-sm mb-2">
+                   Este será tu segundo y último intento del test
+                 </p>
+                 <p className="text-white text-xs opacity-80">
+                   Los resultados del primer intento se preservarán en "answers", "testResults", etc.
+                 </p>
+                 <p className="text-white text-xs opacity-80">
+                   Los nuevos resultados se guardarán en "answers2", "testResults2", etc.
+                 </p>
+               </div>
+                             <button
+                 onClick={() => {
+                   console.log("Botón Realizar Test Otra Vez clickeado");
+                   handleResetTest();
+                 }}
+                 className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"
+               >
+                 Realizar Test Otra Vez
+               </button>
             </div>
           )}
         </>

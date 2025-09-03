@@ -1,23 +1,82 @@
 "use client";
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { correctAnswers,answersveracityQuestions } from '@/lib/correctAnswers'
 import { questions ,veracityQuestions} from '@/constants/questions'
 import { getAuth } from 'firebase/auth'
-import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { getFirestore, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 
-export const TestForm = () => {
+interface TestFormProps {
+  isRetake: boolean;
+}
+
+export const TestForm = ({ isRetake }: TestFormProps) => {
   const router = useRouter() 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<number, boolean>>({})
+  
+  console.log('TestForm - Componente montado con isRetake:', isRetake);
+  console.log('TestForm - Estado inicial de answers:', answers);
+
+  // Establecer el tiempo de inicio del test cuando se monta el componente
+  useEffect(() => {
+    // Solo establecer testStartTime si no existe (para evitar resetear en retomas)
+    if (!localStorage.getItem("testStartTime")) {
+      localStorage.setItem("testStartTime", Date.now().toString());
+    }
+  }, []);
+
+  // Reiniciar el estado cuando es una retoma del test - solo al montar el componente
+  useEffect(() => {
+    console.log('TestForm - useEffect ejecutándose al montar, isRetake:', isRetake);
+    
+    const checkAndResetIfRetake = async () => {
+      try {
+        // Verificar directamente en Firebase si es una retoma
+        const auth = getAuth();
+        if (auth.currentUser) {
+          const db = getFirestore();
+          const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+          const userData = userDoc.data();
+          const isActuallyRetake = userData?.hasRetakenTest === true;
+          
+          console.log('TestForm - Verificación en Firebase - hasRetakenTest:', userData?.hasRetakenTest);
+          console.log('TestForm - Verificación en Firebase - isActuallyRetake:', isActuallyRetake);
+          console.log('TestForm - Prop isRetake recibida:', isRetake);
+          
+          if (isActuallyRetake) {
+            console.log('TestForm - Confirmado como retoma del test - reiniciando estado');
+            console.log('TestForm - Estado de answers antes de reiniciar:', answers);
+            setAnswers({});
+            setCurrentQuestion(0);
+            // También limpiar el localStorage para asegurar un nuevo tiempo de inicio
+            localStorage.removeItem("testStartTime");
+            localStorage.setItem("testStartTime", Date.now().toString());
+            console.log('TestForm - Estado reiniciado - answers ahora es un objeto vacío');
+          } else {
+            console.log('TestForm - No es una retoma del test');
+          }
+        }
+      } catch (error) {
+        console.error('TestForm - Error verificando retoma en Firebase:', error);
+      }
+    };
+    
+    checkAndResetIfRetake();
+  }, []); // Removido isRetake de las dependencias para que solo se ejecute al montar
 
   const handleAnswerChange = (value: boolean) => {
     const questionId = questions[currentQuestion].id
-    setAnswers(prev => ({ 
-      ...prev,
-      [questionId]: value
-    }))
+    setAnswers(prev => {
+      const newAnswers = { 
+        ...prev,
+        [questionId]: value
+      };
+      console.log(`TestForm - Respuesta cambiada para pregunta ${questionId}:`, value);
+      console.log('TestForm - Estado actual de respuestas:', newAnswers);
+      return newAnswers;
+    })
   }
 
   const goToNextQuestion = () => {
@@ -54,14 +113,49 @@ export const TestForm = () => {
         return
       }
   
-      // Update user document in Firestore with answers, scores, and lastTestDate
+      console.log('TestForm - isRetake (prop):', isRetake);
+      console.log('TestForm - Respuestas actuales:', answers);
+      
+      // Obtener el valor final de isRetake desde Firebase
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.data();
+      const finalIsRetake = userData?.hasRetakenTest === true;
+      
+      console.log('TestForm - Verificación en Firebase al enviar - hasRetakenTest:', userData?.hasRetakenTest);
+      console.log('TestForm - Valor final de isRetake para guardado:', finalIsRetake);
+      
+      if (finalIsRetake !== isRetake) {
+        console.log('TestForm - ADVERTENCIA: La prop isRetake no coincide con Firebase');
+      }
+      
+      // Determinar dónde guardar los datos según si es primer o segundo intento
+      let updateData: any;
+      
+      if (finalIsRetake) {
+        // Es el segundo intento - guardar en propiedades con sufijo "2"
+        updateData = {
+          answers2: answers,
+          veracityScore2: veracityScore,
+          testDuration2: testDuration,
+          lastTestDate2: serverTimestamp()
+        };
+        console.log('TestForm - Guardando en propiedades con sufijo "2":', updateData);
+      } else {
+        // Es el primer intento - guardar en propiedades estándar
+        updateData = {
+          answers: answers,
+          veracityScore: veracityScore,
+          testDuration: testDuration,
+          lastTestDate: serverTimestamp()
+        };
+        console.log('TestForm - Guardando en propiedades estándar:', updateData);
+      }
+      console.log('---------------------', updateData);
+      // Update user document in Firestore
       const userRef = doc(db, 'users', auth.currentUser.uid)
-      await updateDoc(userRef, {
-        answers: answers,
-        veracityScore: veracityScore,
-        testDuration: testDuration, // Store duration in seconds
-        lastTestDate: serverTimestamp() // Add timestamp of when the test was completed
-      })
+      await updateDoc(userRef, updateData)
+      
+      console.log('TestForm - Datos guardados exitosamente en Firebase');
   
       // Clean up start time from localStorage
       localStorage.removeItem('testStartTime');

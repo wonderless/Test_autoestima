@@ -13,6 +13,7 @@ const TestPage = () => {
   const [nextAvailableDate, setNextAvailableDate] = useState<string | null>(
     null
   );
+  const [isRetake, setIsRetake] = useState(false);
 
   useEffect(() => {
     const checkTestAccess = async () => {
@@ -24,7 +25,29 @@ const TestPage = () => {
           return;
         }
 
-        // Verificar si tiene el testStartTime en localStorage
+        // Verificar si es una retoma del test
+        const db = getFirestore();
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        const userData = userDoc.data();
+        const hasRetakenTest = userData?.hasRetakenTest === true;
+
+        console.log("Verificando acceso al test:");
+        console.log("UserData:", userData);
+        console.log("hasRetakenTest:", userData?.hasRetakenTest);
+        console.log("hasRetakenTest:", hasRetakenTest);
+        console.log("Tipo de hasRetakenTest:", typeof userData?.hasRetakenTest);
+
+        // Si es una retoma, permitir acceso sin verificar testStartTime
+        if (hasRetakenTest) {
+          console.log("Es una retoma del test - permitiendo acceso");
+          setIsRetake(true);
+          setCanAccess(true);
+          setLoading(false);
+          return;
+        }
+
+        // Verificar si tiene el testStartTime en localStorage (solo para primer intento)
         const testStartTime = localStorage.getItem("testStartTime");
         if (!testStartTime) {
           router.push("/dashboard/user");
@@ -32,21 +55,20 @@ const TestPage = () => {
         }
 
         // Verificar si puede hacer el test según los criterios de tiempo
-        const db = getFirestore();
-        const userRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userRef);
+        const userRef2 = doc(db, "users", auth.currentUser.uid);
+        const userDoc2 = await getDoc(userRef2);
 
-        if (!userDoc.exists()) {
+        if (!userDoc2.exists()) {
           setCanAccess(true);
           setLoading(false);
           return;
         }
 
-        const userData = userDoc.data();
+        const userData2 = userDoc2.data();
 
         // Verificar si el usuario tiene un veracityScore alto (respuestas inconsistentes)
         const hasInconsistentResponses =
-          userData && userData.veracityScore >= 3;
+          userData2 && userData2.veracityScore >= 3;
 
         // Si tuvo respuestas inconsistentes, siempre debe poder hacer el test nuevamente
         if (hasInconsistentResponses) {
@@ -55,9 +77,9 @@ const TestPage = () => {
           return;
         }
 
-        // Verificar si ya hizo el test y cuándo
-        if (userData && userData.lastTestDate) {
-          const lastTestDate = userData.lastTestDate.toDate();
+        // Verificar si ya hizo el test y cuándo 
+        if (userData2 && userData2.lastTestDate) {
+          const lastTestDate = userData2.lastTestDate.toDate();
           const currentDate = new Date();
 
           // Calcular cuándo puede hacer el test nuevamente (1 mes desde el último)
@@ -148,7 +170,7 @@ const TestPage = () => {
   }
 
   // Si puede acceder, mostrar el formulario del test
-  return <TestForm />;
+  return <TestForm isRetake={isRetake} />;
 };
 
 export default TestPage;
