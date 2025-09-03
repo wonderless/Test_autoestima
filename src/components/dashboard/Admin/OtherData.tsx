@@ -6,6 +6,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
+
 interface UserTestData {
   email: string;
   testDuration?: number;
@@ -21,6 +22,13 @@ interface UserTestData {
   };
   answers: Record<number, boolean>;
   invitationCode: string;
+  testResults?: {
+    academico?: { score: number; level: string };
+    fisico?: { score: number; level: string };
+    personal?: { score: number; level: string };
+    social?: { score: number; level: string };
+  };
+  veracityScore?: number;
 }
 
 export default function OtherData() {
@@ -97,8 +105,18 @@ export default function OtherData() {
           return answer ? 'Sí' : 'No';
         });
 
+        const autoestima =
+          (user.testResults?.academico?.score || 0) +
+          (user.testResults?.fisico?.score || 0) +
+          (user.testResults?.personal?.score || 0) +
+          (user.testResults?.social?.score || 0);
+
         return {
           'N°': index + 1,
+          'Email': user.email || 'N/A',
+          'Nombre y Apellido': user.personalInfo?.nombres && user.personalInfo?.apellidos
+            ? `${user.personalInfo.nombres} ${user.personalInfo.apellidos}`
+            : 'N/A',
           'Edad': user.personalInfo?.edad || 'N/A',
           'Sexo': user.personalInfo?.sexo || 'N/A',
           'Región': user.personalInfo?.departamento || 'N/A',
@@ -109,7 +127,14 @@ export default function OtherData() {
           ...answersArray.reduce((acc, curr, i) => ({
             ...acc,
             [`P${i + 1}`]: curr
-          }), {})
+          }), {}),
+          // Nuevas columnas añadidas
+          'Personal': user.testResults?.personal?.score ?? 'N/A',
+          'Social': user.testResults?.social?.score ?? 'N/A',
+          'Académico': user.testResults?.academico?.score ?? 'N/A',
+          'Físico': user.testResults?.fisico?.score ?? 'N/A',
+          'Veracidad': user.veracityScore ?? 'N/A',
+          'Autoestima': autoestima
         };
       });
 
@@ -119,6 +144,8 @@ export default function OtherData() {
       // Set column widths
       const colWidths = {
         'N°': 5,
+        'Email': 25,
+        'Nombre y Apellido': 30,
         'Edad': 8,
         'Sexo': 15,
         'Región': 15,
@@ -126,7 +153,14 @@ export default function OtherData() {
         'Carrera': 25,
         'Ciclo': 10,
         'Tiempo': 15,
-        ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1}`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {})
+        ...Array.from({ length: 30 }, (_, i) => ({ [`P${i + 1}`]: 6 })).reduce((acc, curr) => ({ ...acc, ...curr }), {}),
+        // Anchos para las nuevas columnas
+        'Personal': 10,
+        'Social': 10,
+        'Académico': 12,
+        'Físico': 10,
+        'Veracidad': 10,
+        'Autoestima': 12
       };
 
       ws['!cols'] = Object.values(colWidths).map(width => ({ width }));
@@ -177,6 +211,8 @@ export default function OtherData() {
           <thead className="bg-mi-color-rgb">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">N°</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Nombre y Apellido</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Edad</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Sexo</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Región</th>
@@ -189,12 +225,24 @@ export default function OtherData() {
                   P{i + 1}
                 </th>
               ))}
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Personal</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Social</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Académico</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Físico</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Veracidad</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase">Autoestima</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user, index) => (
               <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
                 <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.email || 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {user.personalInfo?.nombres && user.personalInfo?.apellidos
+                    ? `${user.personalInfo.nombres} ${user.personalInfo.apellidos}`
+                    : 'N/A'}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.edad || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.sexo || 'N/A'}</td>
                 <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.departamento || 'N/A'}</td>
@@ -207,6 +255,17 @@ export default function OtherData() {
                     {user.answers[i + 1] ? 'Sí' : 'No'}
                   </td>
                 ))}
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.personal?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.social?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.academico?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.fisico?.score ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore ?? 'N/A'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {( (user.testResults?.academico?.score || 0) +
+                     (user.testResults?.fisico?.score || 0) +
+                     (user.testResults?.personal?.score || 0) +
+                     (user.testResults?.social?.score || 0) )}
+                </td>
               </tr>
             ))}
           </tbody>
