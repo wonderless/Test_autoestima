@@ -30,8 +30,8 @@ interface Props {
 
 // Tiempo de desbloqueo para pasar al siguiente día de actividades
 // Definido en segundos: 12 horas = 12 * 60 * 60 = 43200 segundos
-//const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
-const UNLOCK_DELAY_SECONDS = 1* 10;
+const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
+//const UNLOCK_DELAY_SECONDS = 1* 10;
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
   social: [2, 4, 17, 23, 27, 29],
