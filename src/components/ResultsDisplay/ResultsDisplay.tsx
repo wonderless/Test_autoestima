@@ -1344,14 +1344,15 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   ));
   OptimizedButton.displayName = 'OptimizedButton';
 
-  // NUEVO: comprobar si LOS 4 aspectos están en nivel ALTO
+  // NUEVO: comprobar si LOS 4 aspectos están en nivel MEDIO o ALTO
   const allFourHigh = useMemo(() => {
     if (!results) return false;
+    const atLeastMedium = (level?: string) => level === "MEDIO" || level === "ALTO";
     return (
-      results.personal?.level === "ALTO" &&
-      results.social?.level === "ALTO" &&
-      results.academico?.level === "ALTO" &&
-      results.fisico?.level === "ALTO"
+      atLeastMedium(results.personal?.level) &&
+      atLeastMedium(results.social?.level) &&
+      atLeastMedium(results.academico?.level) &&
+      atLeastMedium(results.fisico?.level)
     );
   }, [results]);
 
