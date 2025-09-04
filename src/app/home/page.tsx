@@ -4,7 +4,7 @@ import Link from 'next/link';
 export default function HomePage() {
   return (
     <div className="min-h-screen w-full bg-mi-color-rgb flex flex-col items-center justify-center p-4">
-      <h1 className="text-5xl font-bold text-center mb-12 text-white">Test de Autoestima General</h1>
+      <h1 className="text-5xl font-bold text-center mb-12 text-white">Programa de evaluación y orientación de la autoestima</h1>
       <div className="bg-celeste p-8 rounded-lg shadow-md w-full max-w-md mb-8">
         <h2 className="text-xl font-bold text-center mb-4">Acceso de Usuarios</h2>
         

@@ -175,7 +175,7 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl p-4 md:p-6">
       {isFirstQuestion && (
         <h1 className="text-xl md:text-3xl font-bold text-center mb-4 md:mb-8 text-white">
-          Test de Autoestima General (TAG)
+          Programa de evaluación y orientación de la autoestima
         </h1>
       )}
       
