@@ -30,8 +30,8 @@ interface Props {
 
 // Tiempo de desbloqueo para pasar al siguiente día de actividades
 // Definido en segundos: 12 horas = 12 * 60 * 60 = 43200 segundos
-const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
-
+//const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
+const UNLOCK_DELAY_SECONDS = 1* 10;
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
   social: [2, 4, 17, 23, 27, 29],
@@ -867,7 +867,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         setUserTestAnswers(answers);
         const veracityScore = isRetake ? (userData?.veracityScore2 || 0) : (userData?.veracityScore || 0);
 
-        if (veracityScore >= 3) {
+        if (veracityScore >= 4) {
           setIsVeracityValid(false);
           return;
         }
@@ -1092,6 +1092,40 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         return progress.completedQuestionsWithRecommendations >= progress.totalQuestionsWithRecommendations;
       })
   ), [results, recommendationStatus, calculateRealProgress, userTestAnswers]);
+
+  // Función para manejar el caso de respuestas inconsistentes (NO marca hasRetakenTest)
+  const handleRetakeAfterInconsistency = useCallback(async () => {
+    try {
+      console.log("Iniciando handleRetakeAfterInconsistency...");
+      
+      // Limpiar localStorage del test anterior
+      localStorage.removeItem("testAnswers");
+      localStorage.removeItem("testStartTime");
+      
+      const db = getFirestore();
+      const userRef = doc(db, "users", userId);
+      
+      // Limpiar los datos del test anterior que fueron inconsistentes
+      // Esto asegura que las nuevas respuestas se guarden en el campo correcto
+      await updateDoc(userRef, {
+        answers: null,
+        veracityScore: null,
+        testDuration: null,
+        lastTestDate: null,
+        testResults: null
+      });
+      
+      console.log("Datos del test anterior limpiados, navegando a /test para reintento por inconsistencia...");
+      
+      // Navegar al test sin marcar hasRetakenTest
+      router.push("/test");
+      
+    } catch (error) {
+      console.error("Error en retake after inconsistency:", error);
+      // En caso de error, intentar navegar al test de todas formas
+      router.push("/test");
+    }
+  }, [userId, router]);
 
   const handleResetTest = useCallback(async () => {
     try {
@@ -1364,7 +1398,14 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
                   intentar el test nuevamente?
                 </p>
               </div>
-              {/* Eliminado el botón duplicado "Realizar Test Nuevamente" */}
+              <div className="mt-4">
+                <button
+                  onClick={handleRetakeAfterInconsistency}
+                  className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium"
+                >
+                  Realizar Test Nuevamente
+                </button>
+              </div>
             </div>
           </div>
         </div>
