@@ -32,15 +32,9 @@ const TestPage = () => {
         const userData = userDoc.data();
         const hasRetakenTest = userData?.hasRetakenTest === true;
 
-        console.log("Verificando acceso al test:");
-        console.log("UserData:", userData);
-        console.log("hasRetakenTest:", userData?.hasRetakenTest);
-        console.log("hasRetakenTest:", hasRetakenTest);
-        console.log("Tipo de hasRetakenTest:", typeof userData?.hasRetakenTest);
 
         // Si es una retoma, permitir acceso sin verificar testStartTime
         if (hasRetakenTest) {
-          console.log("Es una retoma del test - permitiendo acceso");
           setIsRetake(true);
           setCanAccess(true);
           setLoading(false);

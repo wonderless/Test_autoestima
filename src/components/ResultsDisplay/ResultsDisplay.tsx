@@ -796,7 +796,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
           testResults
         };
       }
-      console.log("---------------------------2", updateData);
       await updateDoc(userRef, updateData);
     } catch (err) {
       console.error("Error saving results:", err);
@@ -1096,7 +1095,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   // Función para manejar el caso de respuestas inconsistentes (NO marca hasRetakenTest)
   const handleRetakeAfterInconsistency = useCallback(async () => {
     try {
-      console.log("Iniciando handleRetakeAfterInconsistency...");
       
       // Limpiar localStorage del test anterior
       localStorage.removeItem("testAnswers");
@@ -1115,7 +1113,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         testResults: null
       });
       
-      console.log("Datos del test anterior limpiados, navegando a /test para reintento por inconsistencia...");
       
       // Navegar al test sin marcar hasRetakenTest
       router.push("/test");
@@ -1129,7 +1126,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
   const handleResetTest = useCallback(async () => {
     try {
-      console.log("Iniciando handleResetTest...");
       
       // Limpiar localStorage del test anterior
       localStorage.removeItem("testAnswers");
@@ -1142,8 +1138,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       const userDoc = await getDoc(doc(db, "users", userId));
       const userData = userDoc.data();
       
-      console.log("Estado actual del usuario:", userData);
-      console.log("hasRetakenTest antes de actualizar:", userData?.hasRetakenTest);
       
       // Solo permitir 2 intentos máximo
       if (userData?.hasRetakenTest === true) {
@@ -1151,20 +1145,16 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
         return;
       }
       
-      console.log("Marcando hasRetakenTest como true...");
       
       // Marcar que es una retoma del test
       await updateDoc(userRef, {
         hasRetakenTest: true
       });
       
-      console.log("hasRetakenTest actualizado exitosamente");
       
       // Verificar que se actualizó correctamente
       const updatedDoc = await getDoc(doc(db, "users", userId));
       const updatedData = updatedDoc.data();
-      console.log("Estado después de actualizar:", updatedData);
-      console.log("hasRetakenTest después de actualizar:", updatedData?.hasRetakenTest);
       
       // Verificar que la actualización fue exitosa antes de navegar
       if (updatedData?.hasRetakenTest !== true) {
@@ -1176,7 +1166,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       // Actualizar el estado local
       setHasRetakenTest(true);
       
-      console.log("Navegando a /test...");
       
       // Navegar al test
       router.push("/test");
@@ -1619,7 +1608,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
                              <button
                  onClick={() => {
-                   console.log("Botón Realizar Test Otra Vez clickeado");
                    handleResetTest();
                  }}
                  className="bg-blue-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-base sm:text-lg font-medium"

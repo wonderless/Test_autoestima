@@ -16,8 +16,6 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<number, boolean>>({})
   
-  console.log('TestForm - Componente montado con isRetake:', isRetake);
-  console.log('TestForm - Estado inicial de answers:', answers);
 
   // Establecer el tiempo de inicio del test cuando se monta el componente
   useEffect(() => {
@@ -29,7 +27,6 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
 
   // Reiniciar el estado cuando es una retoma del test - solo al montar el componente
   useEffect(() => {
-    console.log('TestForm - useEffect ejecutándose al montar, isRetake:', isRetake);
     
     const checkAndResetIfRetake = async () => {
       try {
@@ -41,21 +38,14 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           const userData = userDoc.data();
           const isActuallyRetake = userData?.hasRetakenTest === true;
           
-          console.log('TestForm - Verificación en Firebase - hasRetakenTest:', userData?.hasRetakenTest);
-          console.log('TestForm - Verificación en Firebase - isActuallyRetake:', isActuallyRetake);
-          console.log('TestForm - Prop isRetake recibida:', isRetake);
           
           if (isActuallyRetake) {
-            console.log('TestForm - Confirmado como retoma del test - reiniciando estado');
-            console.log('TestForm - Estado de answers antes de reiniciar:', answers);
             setAnswers({});
             setCurrentQuestion(0);
             // También limpiar el localStorage para asegurar un nuevo tiempo de inicio
             localStorage.removeItem("testStartTime");
             localStorage.setItem("testStartTime", Date.now().toString());
-            console.log('TestForm - Estado reiniciado - answers ahora es un objeto vacío');
           } else {
-            console.log('TestForm - No es una retoma del test');
           }
         }
       } catch (error) {
@@ -73,8 +63,6 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
         ...prev,
         [questionId]: value
       };
-      console.log(`TestForm - Respuesta cambiada para pregunta ${questionId}:`, value);
-      console.log('TestForm - Estado actual de respuestas:', newAnswers);
       return newAnswers;
     })
   }
@@ -113,19 +101,14 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
         return
       }
   
-      console.log('TestForm - isRetake (prop):', isRetake);
-      console.log('TestForm - Respuestas actuales:', answers);
       
       // Obtener el valor final de isRetake desde Firebase
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
       const userData = userDoc.data();
       const finalIsRetake = userData?.hasRetakenTest === true;
       
-      console.log('TestForm - Verificación en Firebase al enviar - hasRetakenTest:', userData?.hasRetakenTest);
-      console.log('TestForm - Valor final de isRetake para guardado:', finalIsRetake);
       
       if (finalIsRetake !== isRetake) {
-        console.log('TestForm - ADVERTENCIA: La prop isRetake no coincide con Firebase');
       }
       
       // Determinar dónde guardar los datos según si es primer o segundo intento
@@ -139,7 +122,6 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           testDuration2: testDuration,
           lastTestDate2: serverTimestamp()
         };
-        console.log('TestForm - Guardando en propiedades con sufijo "2":', updateData);
       } else {
         // Es el primer intento - guardar en propiedades estándar
         updateData = {
@@ -148,14 +130,11 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           testDuration: testDuration,
           lastTestDate: serverTimestamp()
         };
-        console.log('TestForm - Guardando en propiedades estándar:', updateData);
       }
-      console.log('---------------------', updateData);
       // Update user document in Firestore
       const userRef = doc(db, 'users', auth.currentUser.uid)
       await updateDoc(userRef, updateData)
       
-      console.log('TestForm - Datos guardados exitosamente en Firebase');
   
       // Clean up start time from localStorage
       localStorage.removeItem('testStartTime');
