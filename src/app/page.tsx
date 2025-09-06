@@ -21,16 +21,19 @@ export default function ConsentPage() {
       
       <div className="flex flex-col items-center w-full">
         <div className="inline-flex items-start justify-center text-left max-w-xs mx-auto">
-          <input
-            type="checkbox"
-            id="consent"
-            checked={isChecked}
-            onChange={(e) => setIsChecked(e.target.checked)}
-            className="mr-2 mt-2 h-4 w-4 flex-shrink-0"
-          />
-          <div>
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              id="consent"
+              checked={isChecked}
+              onChange={(e) => setIsChecked(e.target.checked)}
+              className="mr-2 mt-2 h-4 w-4 flex-shrink-0"
+            />
+            <span className="text-sm text-white font-bold mt-2">ACEPTO</span>
+          </div>
+          <div className="ml-2">
             <label htmlFor="consent" className="text-sm text-white">
-              Acepto los términos y condiciones para participar en el proyecto
+              El presente es un programa experimental que busca medir y orientar la autoestima. En el caso que algún dominio de la autoestima se encuentre bajo, te orientará para que realices actividades que mejoren el déficit y evitar problemas psicologicos mayores. Tu participación es voluntaria. En el momento que desees puedes abandonar el programa. Si estás de acuerdo haz click en la casilla.
             </label>
             {!isChecked && (
               <p className="text-yellow-300 text-xs mt-1">
