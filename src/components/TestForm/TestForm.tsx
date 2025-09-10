@@ -221,7 +221,9 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
     } catch (error) {
       console.error('=== ERROR EN EL PROCESO DE FINALIZACIÓN ===');
       console.error('Error completo:', error);
-      console.error('Stack trace:', error.stack);
+      if (error instanceof Error) {
+        console.error('Stack trace:', error.stack);
+      }
       console.error('Timestamp del error:', new Date().toISOString());
       alert('Hubo un error al guardar tus respuestas. Por favor intenta nuevamente.')
     }
