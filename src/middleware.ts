@@ -25,7 +25,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Verificar si es una ruta protegida
-  const isProtectedRoute = pathname.startsWith("/dashboard");
+  const isProtectedRoute = pathname.startsWith("/dashboard") || 
+                          pathname.startsWith("/results") || 
+                          pathname.startsWith("/test");
 
   // Obtener el usuario de la cookie
   const user = getUserFromCookie(request);
@@ -41,5 +43,5 @@ export function middleware(request: NextRequest) {
 
 // Configurar para que solo se ejecute en las rutas especificadas
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/results", "/test"],
 };

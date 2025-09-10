@@ -152,6 +152,7 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   const [currentAspectIndex, setCurrentAspectIndex] = useState(0);
   const [testAttempts, setTestAttempts] = useState<number>(1);
   const [showPreviousResults, setShowPreviousResults] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Temporizadores activos
   const activeTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -851,23 +852,51 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     const fetchAndProcessResults = async () => {
       try {
+        // Verificación adicional de userId
+        if (!userId) {
+          console.error('No userId provided to ResultsDisplay')
+          setError("Error: No se pudo identificar al usuario");
+          setIsDataLoaded(true);
+          return;
+        }
+
         const userDoc = await getDoc(doc(db, "users", userId));
+        
+        if (!userDoc.exists()) {
+          console.error(`User document not found for userId: ${userId}`)
+          setError("Error: No se encontró la información del usuario");
+          setIsDataLoaded(true);
+          return;
+        }
+
         const userData = userDoc.data();
+
+        if (!userData) {
+          console.error('User data is null or undefined')
+          setError("Error: Datos del usuario no válidos");
+          setIsDataLoaded(true);
+          return;
+        }
 
         // Verificar si es una retoma del test para usar las respuestas correctas
         const isRetake = userData?.hasRetakenTest === true;
         const answers = isRetake ? userData?.answers2 : userData?.answers;
         
-        if (!answers) {
-          setError("No se encontraron respuestas del test");
+        if (!answers || typeof answers !== 'object') {
+          console.error('No valid answers found for user')
+          setError("No se encontraron respuestas del test válidas");
+          setIsDataLoaded(true);
           return;
         }
 
         setUserTestAnswers(answers);
         const veracityScore = isRetake ? (userData?.veracityScore2 || 0) : (userData?.veracityScore || 0);
 
+        // Verificación más estricta del veracityScore
         if (veracityScore >= 4) {
+          console.log(`User ${userId} has veracityScore ${veracityScore}, showing inconsistency message`)
           setIsVeracityValid(false);
+          setIsDataLoaded(true);
           return;
         }
 
@@ -1345,11 +1374,29 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     );
   }, [results]);
 
+  // Mostrar loading hasta que los datos estén cargados
+  if (!isDataLoaded) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-white">
+          Error
+        </h1>
         <div className="bg-red-100 border-l-4 border-red-500 p-3 sm:p-4 rounded">
           <p className="text-red-700 text-sm sm:text-base">{error}</p>
+          <button
+            onClick={() => router.push('/test')}
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Volver al Test
+          </button>
         </div>
       </div>
     );
