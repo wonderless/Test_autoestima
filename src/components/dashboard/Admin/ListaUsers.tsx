@@ -5,6 +5,48 @@ import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firesto
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
+// Respuestas correctas según el archivo correctAnswers.ts
+const correctAnswers: Record<number, boolean> = {
+  1: true, //academico
+  2: true,//social
+  3: false,//personal
+  4: false,//social
+  5: false,//academico
+  6: false,//
+  7: true,// fisico
+  8: false,//personal
+  9: true,// fisico
+  10: false, //personal
+  11: false,//
+  12: true,// fisico
+  13: true, //personal
+  14: true,//academico
+  15: false,//academico
+  16: true,//academico
+  17: false,//social
+  18: false,//fisico
+  19: false,//
+  20: false,//personal
+  21: true,//fisico
+  22: false,//
+  23: true,//social
+  24: false,//
+  25: true,//academico
+  26: true,//personal
+  27: true,//social
+  28: true,//fisico
+  29: true,//social
+  30: false,//
+};
+
+// División de categorías según ResultsDisplay.tsx
+const categoryQuestions = {
+  personal: [3, 8, 10, 13, 20, 26],
+  social: [2, 4, 17, 23, 27, 29],
+  academico: [1, 4, 14, 15, 16, 25],
+  fisico: [7, 9, 12, 18, 21, 28]
+};
+
 interface UserData {
   email: string;
   invitationCode: string;
@@ -20,6 +62,7 @@ interface UserData {
     fisico: { score: number; level: string };
   };
   testDuration?: number;
+  answers?: Record<number, boolean>; // Agregar answers para poder calcular
 }
 
 export default function ListaUsers() {
@@ -29,6 +72,41 @@ export default function ListaUsers() {
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  // Función para calcular puntajes basándose en las respuestas
+  const calculateScore = (answers: Record<number, boolean>, category: keyof typeof categoryQuestions): number => {
+    const questionsInCategory = categoryQuestions[category];
+    let correctCount = 0;
+    
+    questionsInCategory.forEach(questionNum => {
+      const userAnswer = answers[questionNum];
+      const correctAnswer = correctAnswers[questionNum];
+      if (userAnswer === correctAnswer) {
+        correctCount++;
+      }
+    });
+    
+    // Retornar directamente el número de respuestas correctas (0-6)
+    return correctCount;
+  };
+
+  // Función para obtener el puntaje (calculado o almacenado)
+  const getScore = (answers: Record<number, boolean> | undefined, storedScore: number | undefined, category: keyof typeof categoryQuestions): number => {
+    if (storedScore !== undefined) {
+      return storedScore;
+    }
+    if (answers) {
+      return calculateScore(answers, category);
+    }
+    return 0; // Si no hay ni puntaje almacenado ni respuestas
+  };
+
+  // Función para determinar el nivel basándose en el puntaje
+  const getLevel = (score: number): string => {
+    if (score >= 5) return 'ALTO';
+    if (score >= 3) return 'MEDIO';
+    return 'BAJO';
+  };
 
   useEffect(() => {
     const auth = getAuth();
@@ -92,7 +170,6 @@ export default function ListaUsers() {
           setError(null);
         }
       } catch (err) {
-        console.error('Error fetching data:', err);
         if (isMounted) {
           setError('Error al cargar los datos');
         }
@@ -219,70 +296,84 @@ export default function ListaUsers() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {user.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {user.personalInfo?.nombres && user.personalInfo?.apellidos ? `${user.personalInfo?.nombres} ${user.personalInfo?.apellidos}` : 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {user.personalInfo?.sexo || 'N/A'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-col">
-                    <span>{user.testResults?.personal.score}/6</span>
-                    <span className={`text-sm ${
-                      user.testResults?.personal.level === 'ALTO' ? 'text-green-600' :
-                      user.testResults?.personal.level === 'MEDIO' ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {user.testResults?.personal.level || 'N/A'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-col">
-                    <span>{user.testResults?.social.score}/6</span>
-                    <span className={`text-sm ${
-                      user.testResults?.social.level === 'ALTO' ? 'text-green-600' :
-                      user.testResults?.social.level === 'MEDIO' ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {user.testResults?.social.level || 'N/A'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-col">
-                    <span>{user.testResults?.academico.score}/6</span>
-                    <span className={`text-sm ${
-                      user.testResults?.academico.level === 'ALTO' ? 'text-green-600' :
-                      user.testResults?.academico.level === 'MEDIO' ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {user.testResults?.academico.level || 'N/A'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-col">
-                    <span>{user.testResults?.fisico.score}/6</span>
-                    <span className={`text-sm ${
-                      user.testResults?.fisico.level === 'ALTO' ? 'text-green-600' :
-                      user.testResults?.fisico.level === 'MEDIO' ? 'text-yellow-600' :
-                      'text-red-600'
-                    }`}>
-                      {user.testResults?.fisico.level || 'N/A'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatTime(user.testDuration)}
-                </td>
-              </tr>
-            ))}
+            {users.map((user, index) => {
+              // Calcular puntajes para cada categoría
+              const personalScore = getScore(user.answers, user.testResults?.personal?.score, 'personal');
+              const socialScore = getScore(user.answers, user.testResults?.social?.score, 'social');
+              const academicoScore = getScore(user.answers, user.testResults?.academico?.score, 'academico');
+              const fisicoScore = getScore(user.answers, user.testResults?.fisico?.score, 'fisico');
+
+              // Determinar niveles
+              const personalLevel = user.testResults?.personal?.level || getLevel(personalScore);
+              const socialLevel = user.testResults?.social?.level || getLevel(socialScore);
+              const academicoLevel = user.testResults?.academico?.level || getLevel(academicoScore);
+              const fisicoLevel = user.testResults?.fisico?.level || getLevel(fisicoScore);
+
+              return (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.personalInfo?.nombres && user.personalInfo?.apellidos ? `${user.personalInfo?.nombres} ${user.personalInfo?.apellidos}` : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.personalInfo?.sexo || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{personalScore}/6</span>
+                      <span className={`text-sm ${
+                        personalLevel === 'ALTO' ? 'text-green-600' :
+                        personalLevel === 'MEDIO' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {personalLevel}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{socialScore}/6</span>
+                      <span className={`text-sm ${
+                        socialLevel === 'ALTO' ? 'text-green-600' :
+                        socialLevel === 'MEDIO' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {socialLevel}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{academicoScore}/6</span>
+                      <span className={`text-sm ${
+                        academicoLevel === 'ALTO' ? 'text-green-600' :
+                        academicoLevel === 'MEDIO' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {academicoLevel}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{fisicoScore}/6</span>
+                      <span className={`text-sm ${
+                        fisicoLevel === 'ALTO' ? 'text-green-600' :
+                        fisicoLevel === 'MEDIO' ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {fisicoLevel}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {formatTime(user.testDuration)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

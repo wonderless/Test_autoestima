@@ -6,6 +6,48 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
+// Respuestas correctas según el archivo correctAnswers.ts
+const correctAnswers: Record<number, boolean> = {
+1: true, //academico
+2: true,//social
+3: false,//personal
+4: false,//social
+5: false,//academico
+6: false,//
+7: true,// fisico
+8: false,//personal
+9: true,// fisico
+10: false, //personal
+11: false,//
+12: true,// fisico
+13: true, //personal
+14: true,//academico
+15: false,//academico
+16: true,//academico
+17: false,//social
+18: false,//fisico
+19: false,//
+20: false,//personal
+21: true,//fisico
+22: false,//
+23: true,//social
+24: false,//
+25: true,//academico
+26: true,//personal
+27: true,//social
+28: true,//fisico
+29: true,//social
+30: false,//
+
+};
+
+// División de categorías según ResultsDisplay.tsx
+const categoryQuestions = {
+  personal: [3, 8, 10, 13, 20, 26],
+  social: [2, 4, 17, 23, 27, 29],
+  academico: [1, 4, 14, 15, 16, 25],
+  fisico: [7, 9, 12, 18, 21, 28]
+};
 
 interface UserTestData {
   email: string;
@@ -46,11 +88,34 @@ export default function OtherData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  
   const formatTime = (seconds: number | undefined) => {
     if (!seconds) return 'N/A';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  // Función para calcular puntajes basándose en las respuestas
+  const calculateScore = (answers: Record<number, boolean>, category: keyof typeof categoryQuestions): number => {
+    const questionsInCategory = categoryQuestions[category];
+    let correctCount = 0;
+    
+    questionsInCategory.forEach(questionNum => {
+      const userAnswer = answers[questionNum];
+      const correctAnswer = correctAnswers[questionNum];
+      if (userAnswer === correctAnswer) {
+        correctCount++;
+      }
+    });
+    
+    // Retornar directamente el número de respuestas correctas (0-6)
+    return correctCount;
+  };
+
+  // Función para obtener el puntaje (calculado o almacenado)
+  const getScore = (answers: Record<number, boolean>, storedScore: number | undefined, category: keyof typeof categoryQuestions): number => {
+    return storedScore !== undefined ? storedScore : calculateScore(answers, category);
   };
 
   useEffect(() => {
@@ -97,7 +162,6 @@ export default function OtherData() {
         setUsers(usersData);
         setError(null);
       } catch (err) {
-        console.error('Error fetching data:', err);
         setError('Error al cargar los datos');
       } finally {
         setLoading(false);
@@ -121,17 +185,24 @@ export default function OtherData() {
           return answer !== undefined ? (answer ? 'Sí' : 'No') : 'N/A';
         });
 
-        const autoestima =
-          (user.testResults?.academico?.score || 0) +
-          (user.testResults?.fisico?.score || 0) +
-          (user.testResults?.personal?.score || 0) +
-          (user.testResults?.social?.score || 0);
+        // Calcular puntajes para el primer intento
+        const personalScore = getScore(user.answers, user.testResults?.personal?.score, 'personal');
+        const socialScore = getScore(user.answers, user.testResults?.social?.score, 'social');
+        const academicoScore = getScore(user.answers, user.testResults?.academico?.score, 'academico');
+        const fisicoScore = getScore(user.answers, user.testResults?.fisico?.score, 'fisico');
 
-        const autoestima2 = user.testResults2 ?
-          (user.testResults2?.academico?.score || 0) +
-          (user.testResults2?.fisico?.score || 0) +
-          (user.testResults2?.personal?.score || 0) +
-          (user.testResults2?.social?.score || 0) : 'N/A';
+        // Calcular puntajes para el segundo intento
+        const personalScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.personal?.score, 'personal') : 'N/A';
+        const socialScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.social?.score, 'social') : 'N/A';
+        const academicoScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.academico?.score, 'academico') : 'N/A';
+        const fisicoScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.fisico?.score, 'fisico') : 'N/A';
+
+        const autoestima = personalScore + socialScore + academicoScore + fisicoScore;
+        const autoestima2 = user.answers2 ? 
+          (typeof personalScore2 === 'number' ? personalScore2 : 0) +
+          (typeof socialScore2 === 'number' ? socialScore2 : 0) +
+          (typeof academicoScore2 === 'number' ? academicoScore2 : 0) +
+          (typeof fisicoScore2 === 'number' ? fisicoScore2 : 0) : 'N/A';
 
         return {
           'N°': index + 1,
@@ -151,10 +222,10 @@ export default function OtherData() {
             [`P${i + 1}`]: curr
           }), {}),
           // Columnas del primer intento
-          'Personal': user.testResults?.personal?.score ?? 'N/A',
-          'Social': user.testResults?.social?.score ?? 'N/A',
-          'Académico': user.testResults?.academico?.score ?? 'N/A',
-          'Físico': user.testResults?.fisico?.score ?? 'N/A',
+          'Personal': personalScore,
+          'Social': socialScore,
+          'Académico': academicoScore,
+          'Físico': fisicoScore,
           'Veracidad': user.veracityScore ?? 'N/A',
           'Autoestima': autoestima,
           // Columnas del segundo intento
@@ -162,10 +233,10 @@ export default function OtherData() {
             ...acc,
             [`P${i + 1} S`]: curr
           }), {}),
-          'Personal S': user.testResults2?.personal?.score ?? 'N/A',
-          'Social S': user.testResults2?.social?.score ?? 'N/A',
-          'Académico S': user.testResults2?.academico?.score ?? 'N/A',
-          'Físico S': user.testResults2?.fisico?.score ?? 'N/A',
+          'Personal S': personalScore2,
+          'Social S': socialScore2,
+          'Académico S': academicoScore2,
+          'Físico S': fisicoScore2,
           'Veracidad S': user.veracityScore2 ?? 'N/A',
           'Autoestima S': autoestima2
         };
@@ -213,7 +284,6 @@ export default function OtherData() {
       // Save file
       XLSX.writeFile(wb, 'datos_test_autoestima.xlsx');
     } catch (err) {
-      console.error('Error exporting to Excel:', err);
       alert('Error al exportar a Excel');
     }
   };
@@ -287,61 +357,73 @@ export default function OtherData() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user, index) => (
-              <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.email || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {user.personalInfo?.nombres && user.personalInfo?.apellidos
-                    ? `${user.personalInfo.nombres} ${user.personalInfo.apellidos}`
-                    : 'N/A'}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.edad || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.sexo || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.departamento || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.universidad || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.carrera || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.ciclo || 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{formatTime(user.testDuration) || 'N/A'}</td>
-                {Array.from({ length: 30 }, (_, i) => (
-                  <td key={i} className="px-4 py-3 whitespace-nowrap">
-                    {user.answers[i + 1] ? 'Sí' : 'No'}
+            {users.map((user, index) => {
+              // Calcular puntajes para el primer intento
+              const personalScore = getScore(user.answers, user.testResults?.personal?.score, 'personal');
+              const socialScore = getScore(user.answers, user.testResults?.social?.score, 'social');
+              const academicoScore = getScore(user.answers, user.testResults?.academico?.score, 'academico');
+              const fisicoScore = getScore(user.answers, user.testResults?.fisico?.score, 'fisico');
+
+              // Calcular puntajes para el segundo intento
+              const personalScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.personal?.score, 'personal') : 'N/A';
+              const socialScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.social?.score, 'social') : 'N/A';
+              const academicoScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.academico?.score, 'academico') : 'N/A';
+              const fisicoScore2 = user.answers2 ? getScore(user.answers2, user.testResults2?.fisico?.score, 'fisico') : 'N/A';
+
+              const autoestima = personalScore + socialScore + academicoScore + fisicoScore;
+              const autoestima2 = user.answers2 ? 
+                (typeof personalScore2 === 'number' ? personalScore2 : 0) +
+                (typeof socialScore2 === 'number' ? socialScore2 : 0) +
+                (typeof academicoScore2 === 'number' ? academicoScore2 : 0) +
+                (typeof fisicoScore2 === 'number' ? fisicoScore2 : 0) : 'N/A';
+
+              return (
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                  <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.email || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {user.personalInfo?.nombres && user.personalInfo?.apellidos
+                      ? `${user.personalInfo.nombres} ${user.personalInfo.apellidos}`
+                      : 'N/A'}
                   </td>
-                ))}
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.personal?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.social?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.academico?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults?.fisico?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {( (user.testResults?.academico?.score || 0) +
-                     (user.testResults?.fisico?.score || 0) +
-                     (user.testResults?.personal?.score || 0) +
-                     (user.testResults?.social?.score || 0) )}
-                </td>
-                {/* Datos del segundo intento */}
-                {Array.from({ length: 30 }, (_, i) => (
-                  <td key={`2-${i}`} className="px-4 py-3 whitespace-nowrap">
-                    {user.answers2 ? (user.answers2[i + 1] ? 'Sí' : 'No') : 'N/A'}
-                  </td>
-                ))}
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.personal?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.social?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.academico?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.testResults2?.fisico?.score ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore2 ?? 'N/A'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {user.testResults2 ? 
-                    ((user.testResults2?.academico?.score || 0) +
-                     (user.testResults2?.fisico?.score || 0) +
-                     (user.testResults2?.personal?.score || 0) +
-                     (user.testResults2?.social?.score || 0)) : 'N/A'}
-                </td>
-              </tr>
-            ))}
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.edad || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.sexo || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.departamento || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.universidad || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.carrera || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.personalInfo?.ciclo || 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{formatTime(user.testDuration) || 'N/A'}</td>
+                  {Array.from({ length: 30 }, (_, i) => (
+                    <td key={i} className="px-4 py-3 whitespace-nowrap">
+                      {user.answers[i + 1] ? 'Sí' : 'No'}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 whitespace-nowrap">{personalScore}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{socialScore}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{academicoScore}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{fisicoScore}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore ?? 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{autoestima}</td>
+                  {/* Datos del segundo intento */}
+                  {Array.from({ length: 30 }, (_, i) => (
+                    <td key={`2-${i}`} className="px-4 py-3 whitespace-nowrap">
+                      {user.answers2 ? (user.answers2[i + 1] ? 'Sí' : 'No') : 'N/A'}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 whitespace-nowrap">{personalScore2}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{socialScore2}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{academicoScore2}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{fisicoScore2}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{user.veracityScore2 ?? 'N/A'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{autoestima2}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
+
+
