@@ -79,72 +79,103 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
     }
   }
 
-  const handleSubmit = async () => {
-    try {
-      // Calculate veracity score - modificado para usar answersveracityQuestions
-      const veracityScore = veracityQuestions.reduce((score, questionNum, index) => {
-        return score + (answers[questionNum] === answersveracityQuestions[index] ? 1 : 0)
-      }, 0)
+const handleSubmit = async () => {
+  console.log('🚀 handleSubmit iniciado');
   
-      // Calculate test duration
-      const startTime = localStorage.getItem('testStartTime');
-      const endTime = Date.now();
-      const testDuration = startTime ? Math.floor((endTime - parseInt(startTime)) / 1000) : 0; // Duration in seconds
-  
-      // Get current user and firestore instance
-      const auth = getAuth()
-      const db = getFirestore()
-      
-      if (!auth.currentUser) {
-        console.error('No user logged in')
-        router.push('/login')
-        return
-      }
-  
-      
-      // Obtener el valor final de isRetake desde Firebase
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      const userData = userDoc.data();
-      const finalIsRetake = userData?.hasRetakenTest === true;
-      
-      
-      if (finalIsRetake !== isRetake) {
-      }
-      
-      // Determinar dónde guardar los datos según si es primer o segundo intento
-      let updateData: any;
-      
-      if (finalIsRetake) {
-        // Es el segundo intento - guardar en propiedades con sufijo "2"
-        updateData = {
-          answers2: answers,
-          veracityScore2: veracityScore,
-          testDuration2: testDuration,
-          lastTestDate2: serverTimestamp()
-        };
-      } else {
-        // Es el primer intento - guardar en propiedades estándar
-        updateData = {
-          answers: answers,
-          veracityScore: veracityScore,
-          testDuration: testDuration,
-          lastTestDate: serverTimestamp()
-        };
-      }
-      // Update user document in Firestore
-      const userRef = doc(db, 'users', auth.currentUser.uid)
-      await updateDoc(userRef, updateData)
-      
-  
-      // Clean up start time from localStorage
-      localStorage.removeItem('testStartTime');
-      
-      router.push('/results')
-    } catch (error) {
-      console.error('Error saving test results:', error)
-      alert('Hubo un error al guardar tus respuestas. Por favor intenta nuevamente.')
+  try {
+    console.log('📊 Calculando veracity score...');
+    console.log('veracityQuestions:', veracityQuestions);
+    console.log('answers:', answers);
+    console.log('answersveracityQuestions:', answersveracityQuestions);
+    
+    // Calculate veracity score - modificado para usar answersveracityQuestions
+    const veracityScore = veracityQuestions.reduce((score, questionNum, index) => {
+      return score + (answers[questionNum] === answersveracityQuestions[index] ? 1 : 0)
+    }, 0)
+    
+    console.log('✅ Veracity score calculado:', veracityScore);
+
+    // Calculate test duration
+    const startTime = localStorage.getItem('testStartTime');
+    const endTime = Date.now();
+    const testDuration = startTime ? Math.floor((endTime - parseInt(startTime)) / 1000) : 0; // Duration in seconds
+    
+    console.log('⏰ Test duration calculado:', testDuration, 'segundos');
+    console.log('startTime desde localStorage:', startTime);
+
+    // Get current user and firestore instance
+    const auth = getAuth()
+    const db = getFirestore()
+    
+    console.log('🔐 Auth y DB obtenidos');
+    console.log('Usuario actual:', auth.currentUser);
+    
+    if (!auth.currentUser) {
+      console.error('❌ No user logged in')
+      console.log('🏠 Redirigiendo a "/" por falta de usuario');
+      router.push('/')
+      return
     }
+
+    console.log('👤 Usuario logueado:', auth.currentUser.uid);
+
+    // Obtener el valor final de isRetake desde Firebase
+    console.log('📄 Obteniendo documento de usuario desde Firebase...');
+    const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+    const userData = userDoc.data();
+    console.log('📋 Datos del usuario obtenidos:', userData);
+    
+    const finalIsRetake = userData?.hasRetakenTest === true;
+    console.log('🔄 Es retake?:', finalIsRetake);
+    console.log('hasRetakenTest value:', userData?.hasRetakenTest);
+
+    // Determinar dónde guardar los datos según si es primer o segundo intento
+    let updateData: any;
+
+    if (finalIsRetake) {
+      console.log('📝 Preparando datos para SEGUNDO intento...');
+      // Es el segundo intento - guardar en propiedades con sufijo "2"
+      updateData = {
+        answers2: answers,
+        veracityScore2: veracityScore,
+        testDuration2: testDuration,
+        lastTestDate2: serverTimestamp()
+      };
+    } else {
+      console.log('📝 Preparando datos para PRIMER intento...');
+      // Es el primer intento - guardar en propiedades estándar
+      updateData = {
+        answers: answers,
+        veracityScore: veracityScore,
+        testDuration: testDuration,
+        lastTestDate: serverTimestamp()
+      };
+    }
+    
+    console.log('💾 Datos a actualizar:', updateData);
+
+    // Update user document in Firestore
+    console.log('🔄 Actualizando documento en Firestore...');
+    const userRef = doc(db, 'users', auth.currentUser.uid)
+    await updateDoc(userRef, updateData)
+    console.log('✅ Documento actualizado exitosamente');
+
+    // Clean up start time from localStorage
+    localStorage.removeItem('testStartTime');
+    console.log('🧹 testStartTime removido del localStorage');
+
+    console.log('🎯 Redirigiendo a /results...');
+    router.push('/results')
+    console.log('🎯 router.push(/results) ejecutado');
+    
+  } catch (error) {
+    console.error('💥 Error en handleSubmit:', error)
+    if (error instanceof Error) {
+      console.error('Stack trace completo:', error.stack);
+    }
+    alert('Hubo un error al guardar tus respuestas. Por favor intenta nuevamente.')
   }
+}
 
   const currentQuestionData = questions[currentQuestion]
   const isFirstQuestion = currentQuestion === 0

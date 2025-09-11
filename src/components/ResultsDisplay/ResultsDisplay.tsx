@@ -86,13 +86,6 @@ const determineGeneralLevel = (
   return "BAJO";
 };
 
-// Función para formatear el tiempo restante (mostrar SIEMPRE la fecha y hora exacta)
-const formatTimeRemaining = (seconds: number, countdownStartTime?: number): string => {
-  if (seconds <= 0) return "Tiempo completado";
-  if (!countdownStartTime) return "Calculando hora de desbloqueo...";
-  const unlockTime = new Date(countdownStartTime + (UNLOCK_DELAY_SECONDS * 1000));
-  return `Se desbloqueará la actividad a las ${unlockTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} del ${unlockTime.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}`;
-};
 
 // Componente optimizado para mostrar el countdown sin re-renderizar el resto
 const CountdownDisplay = memo<{
