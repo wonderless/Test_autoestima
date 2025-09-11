@@ -19,7 +19,7 @@ export default function Results() {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.push('/login')
+        router.push('/')
         return
       }
 
