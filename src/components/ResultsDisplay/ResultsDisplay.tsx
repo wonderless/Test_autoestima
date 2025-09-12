@@ -35,7 +35,7 @@ const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
   social: [2, 4, 17, 23, 27, 29],
-  academico: [1, 4, 14, 15, 16, 25],
+  academico: [1, 5, 14, 15, 16, 25],
   fisico: [7, 9, 12, 18, 21, 28],
 };
 
