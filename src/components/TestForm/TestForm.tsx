@@ -1,22 +1,18 @@
 "use client";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { correctAnswers,answersveracityQuestions } from '@/lib/correctAnswers'
-import { questions ,veracityQuestions} from '@/constants/questions'
-import { getAuth } from 'firebase/auth'
-import { getFirestore, doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { answersveracityQuestions } from "@/lib/correctAnswers";
+import { questions, veracityQuestions } from "@/constants/questions";
+import { db } from "@/lib/firebase/config";
+import { doc, updateDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface TestFormProps {
-  isRetake: boolean;
-}
-
-export const TestForm = ({ isRetake }: TestFormProps) => {
-  const router = useRouter() 
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, boolean>>({})
-  
-
+export const TestForm = () => {
+  const router = useRouter();
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, boolean>>({});
+  const { user, loading: authLoading } = useAuth();
   // Establecer el tiempo de inicio del test cuando se monta el componente
   useEffect(() => {
     // Solo establecer testStartTime si no existe (para evitar resetear en retomas)
@@ -27,18 +23,15 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
 
   // Reiniciar el estado cuando es una retoma del test - solo al montar el componente
   useEffect(() => {
-    
     const checkAndResetIfRetake = async () => {
       try {
-        // Verificar directamente en Firebase si es una retoma
-        const auth = getAuth();
-        if (auth.currentUser) {
-          const db = getFirestore();
-          const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-          const userData = userDoc.data();
-          const isActuallyRetake = userData?.hasRetakenTest === true;
-          
-          
+        if (authLoading) {
+          return; // Esperar a que termine de cargar
+        }
+
+        if (user) {
+          const isActuallyRetake = user?.hasRetakenTest === true;
+
           if (isActuallyRetake) {
             setAnswers({});
             setCurrentQuestion(0);
@@ -49,75 +42,93 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           }
         }
       } catch (error) {
-        console.error('TestForm - Error verificando retoma en Firebase:', error);
+        console.error(
+          "TestForm - Error verificando retoma en Firebase:",
+          error
+        );
       }
     };
-    
+
     checkAndResetIfRetake();
-  }, []); // Removido isRetake de las dependencias para que solo se ejecute al montar
+  }, [user, authLoading]); // Removido isRetake de las dependencias para que solo se ejecute al montar
 
   const handleAnswerChange = (value: boolean) => {
-    const questionId = questions[currentQuestion].id
-    setAnswers(prev => {
-      const newAnswers = { 
+    const questionId = questions[currentQuestion].id;
+    setAnswers((prev) => {
+      const newAnswers = {
         ...prev,
-        [questionId]: value
+        [questionId]: value,
       };
       return newAnswers;
-    })
-  }
+    });
+  };
 
   const goToNextQuestion = () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1)
+      setCurrentQuestion((prev) => prev + 1);
     }
-  }
+  };
 
   const goToPreviousQuestion = () => {
     if (currentQuestion > 0) {
-      setCurrentQuestion(prev => prev - 1)
+      setCurrentQuestion((prev) => prev - 1);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     try {
       // Calculate veracity score - modificado para usar answersveracityQuestions
-      const veracityScore = veracityQuestions.reduce((score, questionNum, index) => {
-        return score + (answers[questionNum] === answersveracityQuestions[index] ? 1 : 0)
-      }, 0)
-  
+      const veracityScore = veracityQuestions.reduce(
+        (score, questionNum, index) => {
+          return (
+            score +
+            (answers[questionNum] === answersveracityQuestions[index] ? 1 : 0)
+          );
+        },
+        0
+      );
+
       // Calculate test duration
-      const startTime = localStorage.getItem('testStartTime');
+      const startTime = localStorage.getItem("testStartTime");
       const endTime = Date.now();
-      const testDuration = startTime ? Math.floor((endTime - parseInt(startTime)) / 1000) : 0; // Duration in seconds
-  
-      // Get current user and firestore instance
-      const auth = getAuth()
-      const db = getFirestore()
-      
-      if (!auth.currentUser) {
-        console.error('No user logged in')
-        router.push('/')
-        return
+      const testDuration = startTime
+        ? Math.floor((endTime - parseInt(startTime)) / 1000)
+        : 0; // Duration in seconds
+
+      if (!user) {
+        console.error("No user logged in");
+        router.push("/");
+        return;
       }
-  
-      
+
       // Obtener el valor final de isRetake desde Firebase
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userDoc = await getDoc(doc(db, "users", user.uid));
       const userData = userDoc.data();
       const finalIsRetake = userData?.hasRetakenTest === true;
-      
-      
+
       // Determinar dónde guardar los datos según si es primer o segundo intento
-      let updateData: any;
-      
+      let updateData:
+        | {
+            answers2: Record<number, boolean>;
+            veracityScore2: number;
+            testDuration2: number;
+            lastTestDate2: any;
+          }
+        | {
+            answers: Record<number, boolean>;
+            veracityScore: number;
+            testDuration: number;
+            lastTestDate: any;
+          }
+        | null = null;
+
       if (finalIsRetake) {
         // Es el segundo intento - guardar en propiedades con sufijo "2"
         updateData = {
           answers2: answers,
           veracityScore2: veracityScore,
           testDuration2: testDuration,
-          lastTestDate2: serverTimestamp()
+          lastTestDate2: serverTimestamp(),
         };
       } else {
         // Es el primer intento - guardar en propiedades estándar
@@ -125,27 +136,28 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           answers: answers,
           veracityScore: veracityScore,
           testDuration: testDuration,
-          lastTestDate: serverTimestamp()
+          lastTestDate: serverTimestamp(),
         };
       }
       // Update user document in Firestore
-      const userRef = doc(db, 'users', auth.currentUser.uid)
-      await updateDoc(userRef, updateData)
-      
-  
-      // Clean up start time from localStorage
-      localStorage.removeItem('testStartTime');
-      
-      router.push('/results')
-    } catch (error) {
-      console.error('Error saving test results:', error)
-      alert('Hubo un error al guardar tus respuestas. Por favor intenta nuevamente.')
-    }
-  }
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, updateData);
 
-  const currentQuestionData = questions[currentQuestion]
-  const isFirstQuestion = currentQuestion === 0
-  const isLastQuestion = currentQuestion === questions.length - 1
+      // Clean up start time from localStorage
+      localStorage.removeItem("testStartTime");
+
+      router.push("/results");
+    } catch (error) {
+      console.error("Error saving test results:", error);
+      alert(
+        "Hubo un error al guardar tus respuestas. Por favor intenta nuevamente."
+      );
+    }
+  };
+
+  const currentQuestionData = questions[currentQuestion];
+  const isFirstQuestion = currentQuestion === 0;
+  const isLastQuestion = currentQuestion === questions.length - 1;
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl p-4 md:p-6">
@@ -154,12 +166,12 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           Programa de evaluación y orientación de la autoestima
         </h1>
       )}
-      
+
       <div className="bg-celeste p-4 md:p-8 rounded-lg shadow-lg mb-4 md:mb-6">
         <h2 className="text-lg md:text-xl font-medium mb-4 md:mb-6 min-h-0 md:min-h-[80px] flex items-center">
           {currentQuestion + 1}. {currentQuestionData.text}
         </h2>
-        
+
         <div className="flex flex-row">
           <label className="flex-1 flex items-center justify-center p-2 md:p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
@@ -171,7 +183,7 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
             />
             <span className="ml-3">Sí</span>
           </label>
-          
+
           <label className="flex-1 flex items-center justify-center p-2 md:p-4 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
               type="radio"
@@ -184,7 +196,7 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
           </label>
         </div>
       </div>
-      
+
       <div className="flex justify-between">
         {!isFirstQuestion && (
           <button
@@ -195,9 +207,9 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
             Atrás
           </button>
         )}
-        
+
         <div className="flex-1" />
-        
+
         {!isLastQuestion ? (
           <button
             onClick={goToNextQuestion}
@@ -221,5 +233,5 @@ export const TestForm = ({ isRetake }: TestFormProps) => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};

@@ -19,36 +19,20 @@ import {
   where,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/config";
-
-interface UserData {
-  uid: string;
-  email: string | null;
-  role: "user" | "admin" | "superadmin";
-  invitationCode?: string;
-  adminId?: string;
-  personalInfo?: {
-    nombres: string;
-    apellidos: string;
-    edad: number;
-    universidad: string;
-    carrera: string;
-    ciclo: string;
-    departamento: string;
-  };
-}
+import { UserInfo } from "@/types/userInfo";
 
 // En tu AuthContext.tsx, actualiza la interfaz:
 interface AuthContextType {
-  user: UserData | null;
+  user: UserInfo | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<UserData>;
+  signIn: (email: string, password: string) => Promise<UserInfo>;
   signOut: () => Promise<void>;
   registerUser: (
     email: string,
     password: string,
     invitationCode: string,
-    personalInfo: UserData["personalInfo"]
-  ) => Promise<UserData>; // Cambiado de Promise<void> a Promise<UserData>
+    personalInfo: UserInfo["personalInfo"]
+  ) => Promise<UserInfo>; // Cambiado de Promise<void> a Promise<UserInfo>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -62,35 +46,9 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const getUserRole = async (uid: string) => {
-    try {
-      // Primero intentamos obtener el rol de la colección superadmins
-      const superadminDoc = await getDoc(doc(db, "superadmins", uid));
-      if (superadminDoc.exists()) {
-        return "superadmin";
-      }
 
-      // Luego intentamos obtener el rol de la colección admins
-      const adminDoc = await getDoc(doc(db, "admins", uid));
-      if (adminDoc.exists()) {
-        return "admin";
-      }
-
-      // Finalmente intentamos obtener el rol de la colección users
-      const userDoc = await getDoc(doc(db, "users", uid));
-      if (userDoc.exists() && userDoc.data().role) {
-        return userDoc.data().role;
-      }
-
-      // Si no encontramos un rol, asumimos 'user'
-      return "user";
-    } catch (error) {
-      console.error("Error getting user role:", error);
-      return "user"; // Valor predeterminado
-    }
-  };
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
@@ -102,23 +60,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const adminDoc = await getDoc(doc(db, "admins", firebaseUser.uid));
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
 
-          let userData: UserData | null = null;
+          let userData: UserInfo | null = null;
 
           if (superadminDoc.exists()) {
             userData = {
-              ...(superadminDoc.data() as UserData),
+              ...(superadminDoc.data() as UserInfo),
               uid: firebaseUser.uid,
               role: "superadmin",
             };
           } else if (adminDoc.exists()) {
             userData = {
-              ...(adminDoc.data() as UserData),
+              ...(adminDoc.data() as UserInfo),
               uid: firebaseUser.uid,
               role: "admin",
             };
           } else if (userDoc.exists()) {
             userData = {
-              ...(userDoc.data() as UserData),
+              ...(userDoc.data() as UserInfo),
               uid: firebaseUser.uid,
               role: "user",
             };
@@ -146,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return unsubscribe;
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<UserData> => {
+  const signIn = async (email: string, password: string): Promise<UserInfo> => {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
 
@@ -173,23 +131,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const adminDoc = await getDoc(doc(db, "admins", result.user.uid));
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
-      let userData: UserData | null = null;
+      let userData: UserInfo | null = null;
 
       if (superadminDoc.exists()) {
         userData = {
-          ...(superadminDoc.data() as UserData),
+          ...(superadminDoc.data() as UserInfo),
           uid: result.user.uid,
           role: "superadmin",
         };
       } else if (adminDoc.exists()) {
         userData = {
-          ...(adminDoc.data() as UserData),
+          ...(adminDoc.data() as UserInfo),
           uid: result.user.uid,
           role: "admin",
         };
       } else if (userDoc.exists()) {
         userData = {
-          ...(userDoc.data() as UserData),
+          ...(userDoc.data() as UserInfo),
           uid: result.user.uid,
           role: "user",
         };
@@ -239,8 +197,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     email: string,
     password: string,
     invitationCode: string,
-    personalInfo: UserData["personalInfo"]
-  ): Promise<UserData> => {
+    personalInfo: UserInfo["personalInfo"]
+  ): Promise<UserInfo> => {
     try {
       // 1. Validar código de invitación
       const adminId = await validateInvitationCode(invitationCode);
@@ -257,7 +215,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const uid = userCredential.user.uid;
 
       // 3. Crear documento en Firestore
-      const userData: UserData = {
+      const userData: UserInfo = {
         uid,
         email,
         role: "user",

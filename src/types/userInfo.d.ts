@@ -1,10 +1,11 @@
 export interface UserInfo {
+    uid: string;
     role: string;
     email: string;
     adminId: string;
-    answers: boolean[];
+    answers?: boolean[];
     invitationCode: string;
-    lastTestDate:Date;
+    lastTestDate?:Date;
     personalInfo:{
         apellidos: string;
         carrera: string;
@@ -15,14 +16,15 @@ export interface UserInfo {
         sexo: string;
         universidad: string;
     }
-    testDuration: number;
-    testResults: {
+    testDuration?: number;
+    testResults?: {
         academico: Results;
         fisico: Results;
         personal: Results;
         social: Results;
     };
-    veracityScore:number;
+    veracityScore?:number;
+    hasRetakenTest?:boolean;
 }
 export interface Results{
     level:string;

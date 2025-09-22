@@ -3,21 +3,24 @@
 import { ResultsDisplay } from '../../components/ResultsDisplay/ResultsDisplay'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import { getFirestore, doc, getDoc } from 'firebase/firestore'  
+import { doc, getDoc } from 'firebase/firestore'  
 import { UserInfo } from '@/types/userInfo'
+import { useAuth } from '@/contexts/AuthContext'
+import { db } from '@/lib/firebase/config'
 
 export default function Results() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [userInfo, setUserInfo] = useState<UserInfo | null >(null)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const { user, loading: authLoading } = useAuth() // Destructurar loading
 
   useEffect(() => {
-    const auth = getAuth()
-    const db = getFirestore()
+    const verifyUserAndFetchData = async () => {
+      if (authLoading) {
+        return // No hacer nada mientras está cargando
+      }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.push('/')
         return
@@ -25,29 +28,29 @@ export default function Results() {
 
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
-        
+
         if (userDoc.exists()) {
           const userData = userDoc.data()
-          setUserInfo({...userData,lastTestDate:userData.lastTestDate.toDate()}as UserInfo)
+          setUserInfo({
+            ...userData,
+            lastTestDate: userData.lastTestDate.toDate()
+          } as UserInfo)
           setUserId(user.uid)
         } else {
-          // Silenciosamente redirigir al inicio sin mostrar error
-          // Controlando el caso "User document not found"
           router.push('/')
         }
       } catch (error) {
-        console.error("Error retrieving user document:", error);
-        // Silenciosamente manejar cualquier error redirigiendo
+        console.error("Error retrieving user document:", error)
         router.push('/')
       } finally {
         setIsLoading(false)
       }
-    })
+    }
 
-    return () => unsubscribe()
-  }, [router])
+    verifyUserAndFetchData()
+  }, [user, authLoading, router])
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

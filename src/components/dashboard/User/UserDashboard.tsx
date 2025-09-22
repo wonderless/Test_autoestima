@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import { useAuth } from "@/contexts/AuthContext";
 
 const UserDashboard = () => {
   const router = useRouter();
@@ -12,18 +13,21 @@ const UserDashboard = () => {
     null
   );
   const [loading, setLoading] = useState(true);
+  const {user, loading: authLoading} = useAuth();
 
   useEffect(() => {
     const checkTestAvailability = async () => {
       try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
+        if (authLoading) {
+          return; // Esperar a que la autenticación termine de cargar
+        }
+
+        if (!user) {
           router.push("/login");
           return;
         }
 
-        const db = getFirestore();
-        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userRef);
         const userData = userDoc.data();
 
@@ -70,7 +74,7 @@ const UserDashboard = () => {
     };
 
     checkTestAvailability();
-  }, [router]);
+  }, [router, user, authLoading]);
 
   const handleStartTest = () => {
     // Store start time in localStorage
