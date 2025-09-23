@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   User as FirebaseUser,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -33,6 +34,7 @@ interface AuthContextType {
     invitationCode: string,
     personalInfo: UserInfo["personalInfo"]
   ) => Promise<UserInfo>; // Cambiado de Promise<void> a Promise<UserInfo>
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -103,6 +105,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return unsubscribe;
   }, []);
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const signIn = async (email: string, password: string): Promise<UserInfo> => {
     try {
@@ -270,7 +280,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, signOut, registerUser }}
+      value={{ user, loading, signIn, signOut, registerUser, resetPassword }}
     >
       {children}
     </AuthContext.Provider>

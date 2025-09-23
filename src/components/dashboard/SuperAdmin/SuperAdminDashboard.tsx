@@ -1,13 +1,15 @@
 'use client';
 import { useState, useEffect, useRef } from "react";
 import ListaAdmin from "./ListaAdmin";
-import { Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SuperAdminDashboard = () => {
   const [selectedOption, setSelectedOption] = useState("Administradores creados");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-
+  const { signOut } = useAuth();
+  
   const renderContent = () => {
     switch (selectedOption) {
       case "Administradores creados":
@@ -39,6 +41,14 @@ const SuperAdminDashboard = () => {
       document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [sidebarOpen]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <div className="flex h-screen">
@@ -81,6 +91,17 @@ const SuperAdminDashboard = () => {
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Sign Out Button */}
+        <div className="p-5 border-t border-gray-600">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 p-3 text-left hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <LogOut size={20} />
+            Cerrar Sesión
+          </button>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogOut } from "lucide-react";
 
 const UserDashboard = () => {
   const router = useRouter();
@@ -13,7 +14,7 @@ const UserDashboard = () => {
     null
   );
   const [loading, setLoading] = useState(true);
-  const {user, loading: authLoading} = useAuth();
+  const {user, loading: authLoading, signOut} = useAuth();
 
   useEffect(() => {
     const checkTestAvailability = async () => {
@@ -82,6 +83,15 @@ const UserDashboard = () => {
     router.push("/test");
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-6 max-w-lg bg-celeste rounded-xl shadow-md flex flex-col items-center">
@@ -92,6 +102,19 @@ const UserDashboard = () => {
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
+      
+      {/* Sign Out Button */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Cerrar Sesión"
+        >
+          <LogOut size={20} />
+          <span className="text-sm">Cerrar Sesión</span>
+        </button>
+      </div>
+
       <h1 className="text-center text-2xl font-bold mb-4">
         Programa de evaluación y orientación de la autoestima
       </h1>

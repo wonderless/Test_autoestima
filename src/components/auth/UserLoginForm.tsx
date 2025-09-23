@@ -74,6 +74,10 @@ export default function UserLoginForm() {
     }
   };
 
+  const handleResetPassword = () => {
+    router.push("/auth/resetPassword");
+  };
+
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
       <h2 className="text-2xl font-bold text-center mb-6">
@@ -123,6 +127,17 @@ export default function UserLoginForm() {
           />
         </div>
 
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            className="text-sm text-blue-500 hover:underline"
+            disabled={loading}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+        
         <button
           type="submit"
           disabled={loading}

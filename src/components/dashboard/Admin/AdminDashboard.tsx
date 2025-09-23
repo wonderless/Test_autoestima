@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import ListaUsers from "./ListaUsers";
 import OtherData from "./OtherData";
-import { Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AdminDashboard = () => {
   const [selectedOption, setSelectedOption] = useState("Lista de usuarios");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
-
+  const { signOut } = useAuth();
   const menuOptions = [
     "Lista de usuarios",
     "Datos sociogeograficos"
@@ -23,6 +24,14 @@ const AdminDashboard = () => {
         return <OtherData />;
       default:
         return <div>Seleccione una opción</div>;
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 
@@ -70,9 +79,10 @@ const AdminDashboard = () => {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
           transition-transform duration-300
           md:static md:translate-x-0 md:w-auto md:min-w-52
+          flex flex-col
         `}
       >
-        <div className="p-5">
+        <div className="p-5 flex-1">
           <h2 className="text-xl font-bold mb-4 mt-12 md:mt-0">Panel de Administrador</h2>
           <ul>
             {menuOptions.map((option) => (
@@ -90,6 +100,17 @@ const AdminDashboard = () => {
               </li>
             ))}
           </ul>
+        </div>
+        
+        {/* Sign Out Button */}
+        <div className="p-5 border-t border-gray-600">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 p-3 text-left hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <LogOut size={20} />
+            Cerrar Sesión
+          </button>
         </div>
       </div>
 
