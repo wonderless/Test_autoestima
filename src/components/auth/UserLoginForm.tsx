@@ -2,13 +2,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/config";
+import { db } from "@/lib/firebase/config";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function UserLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,29 +20,15 @@ export default function UserLoginForm() {
 
     try {
       // 1. Intentar autenticar con Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      // 2. Verificar si el usuario existe en la colección 'users'
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-
-      if (!userDoc.exists()) {
-        await auth.signOut();
-        throw new Error("No tienes permiso para acceder como usuario");
-      }
-
-      const userData = userDoc.data();
+      const userData = await signIn(email, password);
 
       // 3. Verificar que el rol sea 'user'
       if (userData.role !== "user") {
-        await auth.signOut();
+        await signOut();
         throw new Error("No tienes permiso para acceder como usuario");
       }
 
-      // 4. Establecer la sesión mediante la API
+      /* // 4. Establecer la sesión mediante la API
       const token = await userCredential.user.getIdToken();
       // Incluir el rol en el token para que el middleware pueda verificarlo
       const sessionData = {
@@ -58,7 +46,7 @@ export default function UserLoginForm() {
 
       if (!response.ok) {
         throw new Error("Error al establecer la sesión");
-      }
+      } */
 
       // 5. Si todo está bien, redirigir al dashboard de usuario
       router.push("/dashboard/user");
@@ -84,6 +72,10 @@ export default function UserLoginForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetPassword = () => {
+    router.push("/auth/resetPassword");
   };
 
   return (
@@ -135,6 +127,17 @@ export default function UserLoginForm() {
           />
         </div>
 
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            className="text-sm text-blue-500 hover:underline"
+            disabled={loading}
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+        
         <button
           type="submit"
           disabled={loading}

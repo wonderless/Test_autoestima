@@ -32,7 +32,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
       };
 
       // Obtener el nivel del rol del usuario
-      const userRoleLevel = roleHierarchy[user.role] || 0;
+      const userRoleLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
 
       // Verificar si el usuario tiene al menos el nivel de rol requerido
       let hasRequiredRole = false;

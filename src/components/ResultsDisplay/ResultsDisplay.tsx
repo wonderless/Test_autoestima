@@ -1,14 +1,12 @@
 import { correctAnswers as importedCorrectAnswers } from "@/lib/correctAnswers";
 import {
   allRecommendations,
-  getDetailedRecommendations,
   RecommendationItem,
-  FeedbackQuestion,
 } from "../../constants/recommendations";
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc, getFirestore, updateDoc } from "firebase/firestore";
-import { questions as allTestQuestions } from "../../constants/questions";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 import PsychologicalProfile from "./PsychologicalProfile";
 
 interface CategoryScore {
@@ -371,7 +369,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     // Guardar en Firebase
     try {
-      const db = getFirestore();
       const userRef = doc(db, "users", userId);
       await updateDoc(userRef, {
         [`recommendationProgress.${category}.recommendationProgress.${recommendationId}`]: {
@@ -749,7 +746,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
     resultsData: Results
   ) => {
     try {
-      const db = getFirestore();
       const userRef = doc(db, "users", userId);
 
       const testResults = {
@@ -821,7 +817,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
 
     if (allAnswered) {
       try {
-        const db = getFirestore();
         const userRef = doc(db, "users", userId);
         await updateDoc(userRef, {
           [`activityFeedback.${currentFeedbackRec.id}`]: feedbackAnswers,
@@ -840,8 +835,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   }, [currentFeedbackRec, feedbackAnswers, userId]);
 
   useEffect(() => {
-    const db = getFirestore();
-
     const fetchAndProcessResults = async () => {
       try {
         const userDoc = await getDoc(doc(db, "users", userId));
@@ -991,7 +984,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   useEffect(() => {
     const fetchHasRetakenTest = async () => {
       try {
-        const db = getFirestore();
         const userDoc = await getDoc(doc(db, "users", userId));
         const userData = userDoc.data();
         if (userData) {
@@ -1093,7 +1085,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       localStorage.removeItem("testAnswers");
       localStorage.removeItem("testStartTime");
       
-      const db = getFirestore();
       const userRef = doc(db, "users", userId);
       
       // Limpiar los datos del test anterior que fueron inconsistentes
@@ -1124,7 +1115,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
       localStorage.removeItem("testAnswers");
       localStorage.removeItem("testStartTime");
       
-      const db = getFirestore();
       const userRef = doc(db, "users", userId);
       
       // Obtener el documento actual para verificar el estado
@@ -1219,7 +1209,6 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
   // Función para obtener los resultados de un intento específico
   const getAttemptResults = useCallback(async (attemptNumber: number) => {
     try {
-      const db = getFirestore();
       const userDoc = await getDoc(doc(db, "users", userId));
       const userData = userDoc.data();
       

@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogOut } from "lucide-react";
 
 const UserDashboard = () => {
   const router = useRouter();
@@ -12,18 +14,21 @@ const UserDashboard = () => {
     null
   );
   const [loading, setLoading] = useState(true);
+  const {user, loading: authLoading, signOut} = useAuth();
 
   useEffect(() => {
     const checkTestAvailability = async () => {
       try {
-        const auth = getAuth();
-        if (!auth.currentUser) {
+        if (authLoading) {
+          return; // Esperar a que la autenticación termine de cargar
+        }
+
+        if (!user) {
           router.push("/login");
           return;
         }
 
-        const db = getFirestore();
-        const userRef = doc(db, "users", auth.currentUser.uid);
+        const userRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userRef);
         const userData = userDoc.data();
 
@@ -70,12 +75,21 @@ const UserDashboard = () => {
     };
 
     checkTestAvailability();
-  }, [router]);
+  }, [router, user, authLoading]);
 
   const handleStartTest = () => {
     // Store start time in localStorage
     localStorage.setItem("testStartTime", Date.now().toString());
     router.push("/test");
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   if (loading) {
@@ -88,6 +102,19 @@ const UserDashboard = () => {
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-celeste p-8 rounded-lg shadow-md w-full max-w-md">
+      
+      {/* Sign Out Button */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Cerrar Sesión"
+        >
+          <LogOut size={20} />
+          <span className="text-sm">Cerrar Sesión</span>
+        </button>
+      </div>
+
       <h1 className="text-center text-2xl font-bold mb-4">
         Programa de evaluación y orientación de la autoestima
       </h1>

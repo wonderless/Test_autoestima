@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from "@/contexts/AuthContext";
+import {db } from "@/lib/firebase/config";
 import { TestForm } from "@/components/TestForm/TestForm"; // Ajusta la ruta según tu estructura
 
 const TestPage = () => {
@@ -14,23 +15,22 @@ const TestPage = () => {
     null
   );
   const [isRetake, setIsRetake] = useState(false);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const checkTestAccess = async () => {
       try {
+        if (authLoading) {
+          return; // Esperar a que termine de cargar
+        }
+
         // Verificar si el usuario está autenticado
-        const auth = getAuth();
-        if (!auth.currentUser) {
+        if (!user) {
           router.push("/");
           return;
         }
 
-        // Verificar si es una retoma del test
-        const db = getFirestore();
-        const userRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userRef);
-        const userData = userDoc.data();
-        const hasRetakenTest = userData?.hasRetakenTest === true;
+        const hasRetakenTest = user?.hasRetakenTest === true;
 
 
         // Si es una retoma, permitir acceso sin verificar testStartTime
@@ -49,7 +49,7 @@ const TestPage = () => {
         }
 
         // Verificar si puede hacer el test según los criterios de tiempo
-        const userRef2 = doc(db, "users", auth.currentUser.uid);
+        const userRef2 = doc(db, "users", user.uid);
         const userDoc2 = await getDoc(userRef2);
 
         if (!userDoc2.exists()) {
@@ -106,7 +106,7 @@ const TestPage = () => {
     };
 
     checkTestAccess();
-  }, [router]);
+  }, [user, authLoading, router]);
 
   if (loading) {
     return (
@@ -164,7 +164,7 @@ const TestPage = () => {
   }
 
   // Si puede acceder, mostrar el formulario del test
-  return <TestForm isRetake={isRetake} />;
+  return <TestForm />;
 };
 
 export default TestPage;
