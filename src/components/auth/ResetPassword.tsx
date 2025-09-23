@@ -23,7 +23,7 @@ export default function ResetPassword() {
 
     try {
       await resetPassword(email);
-      setMessage("Se ha enviado un enlace de restablecimiento a tu correo electrónico");
+      setMessage("Se ha enviado un enlace de restablecimiento a tu correo electrónico\nRevisa tu bandeja de entrada y la carpeta de spam!");
     } catch (error: any) {
       setError("Error al enviar el correo de restablecimiento. Verifica que el correo sea válido.");
       console.error("Error resetting password:", error);
