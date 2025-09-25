@@ -113,16 +113,17 @@ export const TestForm = () => {
             veracityScore2: number;
             testDuration2: number;
             lastTestDate2: any;
-            recommendationProgress?: {}; // 👈 ahora permitido
+            recommendationProgress?: Record<string, unknown>; // ✅ mejor que {}
           }
         | {
             answers: Record<number, boolean>;
             veracityScore: number;
             testDuration: number;
             lastTestDate: any;
-            recommendationProgress?: {}; // 👈 opcional aquí también
+            recommendationProgress?: Record<string, unknown>; // ✅
           }
         | null = null;
+
 
       if (finalIsRetake) {
         // Es el segundo intento - guardar en propiedades con sufijo "2"
@@ -131,7 +132,7 @@ export const TestForm = () => {
           veracityScore2: veracityScore,
           testDuration2: testDuration,
           lastTestDate2: serverTimestamp(),
-          recommendationProgress: {}, // 🔥 LIMPIA LAS ACTIVIDADES
+          recommendationProgress: {} as Record<string, unknown>, // 🔥 LIMPIA LAS ACTIVIDADES
         };
       }
       else {
