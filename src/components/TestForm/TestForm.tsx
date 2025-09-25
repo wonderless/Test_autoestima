@@ -113,12 +113,14 @@ export const TestForm = () => {
             veracityScore2: number;
             testDuration2: number;
             lastTestDate2: any;
+            recommendationProgress?: {}; // 👈 ahora permitido
           }
         | {
             answers: Record<number, boolean>;
             veracityScore: number;
             testDuration: number;
             lastTestDate: any;
+            recommendationProgress?: {}; // 👈 opcional aquí también
           }
         | null = null;
 
@@ -129,8 +131,10 @@ export const TestForm = () => {
           veracityScore2: veracityScore,
           testDuration2: testDuration,
           lastTestDate2: serverTimestamp(),
+          recommendationProgress: {}, // 🔥 LIMPIA LAS ACTIVIDADES
         };
-      } else {
+      }
+      else {
         // Es el primer intento - guardar en propiedades estándar
         updateData = {
           answers: answers,

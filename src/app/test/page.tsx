@@ -29,12 +29,12 @@ const TestPage = () => {
           router.push("/");
           return;
         }
-
-        const hasRetakenTest = user?.hasRetakenTest === true;
-
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        const userData = userDoc.data();
 
         // Si es una retoma, permitir acceso sin verificar testStartTime
-        if (hasRetakenTest) {
+        if (userData?.hasRetakenTest === true) {
           setIsRetake(true);
           setCanAccess(true);
           setLoading(false);

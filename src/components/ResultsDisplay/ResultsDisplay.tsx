@@ -28,7 +28,7 @@ interface Props {
 
 // Tiempo de desbloqueo para pasar al siguiente día de actividades
 // Definido en segundos: 12 horas = 12 * 60 * 60 = 43200 segundos
-const UNLOCK_DELAY_SECONDS = 12 * 60 * 60;
+const UNLOCK_DELAY_SECONDS = 1;
 //const UNLOCK_DELAY_SECONDS = 1* 10;
 const categoryQuestions = {
   personal: [3, 8, 10, 13, 20, 26],
@@ -1431,7 +1431,22 @@ export const ResultsDisplay = ({ userId, userInfo }: Props) => {
             Ahora presentas una muy buena autoestima y esperamos sigas manteniéndola así. Éxitos.
           </p>
         </div>
-      ) : (
+      ) 
+:areAllAspectsCompleted() && hasRetakenTest ? (
+  // 👉 Caso 2: segundo intento, aunque no cumpla allFourHigh
+  <div className="mt-8 p-6 bg-white rounded-lg shadow-md max-w-2xl mx-auto text-center">
+    <h2 className="text-2xl font-bold mb-3 text-gray-800">
+      Gracias por tu valiosa participación
+    </h2>
+    <p className="text-gray-700 text-base">
+      Gracias por tu esfuerzo en este segundo intento. Aunque los resultados no fueron los más óptimos, 
+      recuerda que siempre hay oportunidades para seguir
+      creciendo y fortaleciendo tu autoestima. ¡Confía en ti y continúa adelante!
+    </p>
+  </div>
+) :
+
+      (
         <>
           <h1 className="text-2xl sm:text-3xl font-bold text-center mt-6 mb-4 sm:mb-6 text-white">
             Orientaciones y recomendaciones a seguir
